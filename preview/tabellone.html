@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anteprima — tabellone della festa</title>
+    <style>
+      @font-face {
+        font-family: 'Archivo';
+        font-style: normal;
+        font-weight: 400 600;
+        font-display: swap;
+        src: url('../public/fonts/archivo-latin.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Spectral';
+        font-style: normal;
+        font-weight: 500;
+        font-display: swap;
+        src: url('../public/fonts/spectral-500-latin.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Spectral';
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        src: url('../public/fonts/spectral-600-latin.woff2') format('woff2');
+      }
+
+      :root {
+        --paper: #f1ece0;
+        --surface: #fbf8f1;
+        --surface-2: #fffdf8;
+        --ink: #141d17;
+        --ink-2: #47534a;
+        --ink-3: #5d6a60;
+        --green: #123a2b;
+        --green-2: #1c5942;
+        --brass: #7d5a20;
+        --brick: #96322a;
+        --line: rgba(20, 29, 23, 0.12);
+        --line-2: rgba(20, 29, 23, 0.22);
+        --line-3: rgba(20, 29, 23, 0.36);
+        --sans: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+        --serif: 'Spectral', Georgia, 'Times New Roman', serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 15px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        font-family: var(--serif);
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        text-wrap: balance;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      button {
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .wrap {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 26px 18px 64px;
+        display: grid;
+        gap: 22px;
+      }
+
+      .masthead {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line-2);
+      }
+
+      .masthead h1 {
+        font-size: clamp(1.25rem, 3.2vw, 1.7rem);
+      }
+
+      .masthead .tag {
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        text-align: right;
+      }
+
+      .sheet {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 1.05rem 1.1rem 1.15rem;
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .sheet-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .sheet-head h2 {
+        font-size: 1.02rem;
+      }
+
+      .sheet-meta {
+        font-size: 0.8rem;
+        color: var(--ink-2);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---------- indice dei giorni ---------- */
+
+      .weekdays,
+      .days {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 4px;
+      }
+
+      .weekdays span {
+        font-size: 0.68rem;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        text-align: center;
+        padding-bottom: 2px;
+      }
+
+      .day {
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--surface-2);
+        padding: 4px 5px 5px;
+        min-height: 50px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 6px;
+        text-align: left;
+      }
+
+      .day .num {
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 0.92rem;
+        font-variant-numeric: tabular-nums;
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+      }
+
+      .day .num small {
+        font-family: var(--sans);
+        font-size: 0.58rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+
+      .bars {
+        display: flex;
+        gap: 3px;
+        height: 4px;
+      }
+
+      .bar {
+        flex: 1;
+        border-radius: 1px;
+        background: rgba(20, 29, 23, 0.16);
+      }
+
+      .bar.is-on {
+        background: var(--green-2);
+      }
+
+      .day.is-closed {
+        background-image: repeating-linear-gradient(
+          -45deg,
+          transparent 0 5px,
+          rgba(20, 29, 23, 0.055) 5px 6px
+        );
+        color: var(--ink-3);
+      }
+
+      .day.is-closed .num {
+        font-family: var(--sans);
+        font-size: 0.8rem;
+        color: var(--ink-3);
+      }
+
+      .day.is-event:hover,
+      .day.is-event:focus-visible {
+        border-color: var(--line-3);
+        background-color: #fff;
+        outline: none;
+      }
+
+      .day.is-selected {
+        border-color: var(--green);
+        box-shadow: inset 0 0 0 1.5px var(--green);
+      }
+
+      .day.is-selected .bar:not(.is-on) {
+        background: rgba(18, 58, 43, 0.16);
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.15rem 1rem;
+        font-size: 0.76rem;
+        color: var(--ink-3);
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .legend i {
+        width: 14px;
+        height: 4px;
+        border-radius: 1px;
+        background: rgba(20, 29, 23, 0.16);
+      }
+
+      .legend i.on {
+        background: var(--green-2);
+      }
+
+      .legend i.closed {
+        width: 14px;
+        height: 12px;
+        border: 1px solid var(--line);
+        background-image: repeating-linear-gradient(
+          -45deg,
+          transparent 0 3px,
+          rgba(20, 29, 23, 0.12) 3px 4px
+        );
+        background-color: var(--surface-2);
+      }
+
+      /* ---------- tabellone del giorno ---------- */
+
+      .board-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .board-head h2 {
+        font-size: clamp(1.15rem, 2.6vw, 1.45rem);
+      }
+
+      .board-head .when {
+        font-size: 0.82rem;
+        color: var(--ink-2);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .nav {
+        display: flex;
+        gap: 4px;
+      }
+
+      .nav button {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--line-2);
+        border-radius: 3px;
+        background: var(--surface-2);
+        color: var(--ink-2);
+      }
+
+      .nav button:hover {
+        border-color: var(--line-3);
+        color: var(--ink);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: minmax(78px, 0.85fr) repeat(3, minmax(0, 1fr));
+        gap: 1px;
+        background: var(--line);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+
+      .board > * {
+        background: var(--surface-2);
+      }
+
+      .corner,
+      .col-head {
+        padding: 5px 7px;
+        font-size: 0.6rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .col-head {
+        text-align: left;
+      }
+
+      .place {
+        padding: 7px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        line-height: 1.25;
+        background: var(--surface);
+      }
+
+      .place em {
+        display: block;
+        font-style: normal;
+        font-weight: 400;
+        font-size: 0.66rem;
+        color: var(--ink-3);
+      }
+
+      .cell {
+        min-height: 64px;
+        padding: 5px 6px;
+        display: grid;
+        align-content: start;
+        gap: 4px;
+        text-align: left;
+        border: 0;
+        background: var(--surface-2);
+      }
+
+      .cell.is-empty {
+        color: var(--ink-3);
+        font-size: 0.74rem;
+      }
+
+      .cell.is-empty:hover {
+        background: #fff;
+        color: var(--green-2);
+      }
+
+      .cell.is-empty span {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+      }
+
+      .entry .who {
+        font-size: 0.78rem;
+        line-height: 1.2;
+        font-weight: 600;
+        overflow-wrap: break-word;
+      }
+
+      .entry .price {
+        display: block;
+        font-size: 0.72rem;
+        color: var(--ink-2);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .entry.is-open .price {
+        color: var(--brass);
+      }
+
+      .footnote {
+        font-size: 0.78rem;
+        color: var(--ink-3);
+      }
+
+      .footnote strong {
+        color: var(--ink-2);
+        font-weight: 600;
+      }
+
+      @media (min-width: 760px) {
+        .wrap {
+          padding: 34px 26px 72px;
+          gap: 26px;
+        }
+        .sheet {
+          padding: 1.25rem 1.35rem 1.35rem;
+        }
+        .day {
+          min-height: 58px;
+          padding: 5px 7px 6px;
+        }
+        .day .num {
+          font-size: 1rem;
+        }
+        .cell {
+          min-height: 72px;
+          padding: 7px 9px;
+        }
+        .entry .who {
+          font-size: 0.84rem;
+        }
+        .corner,
+        .col-head {
+          font-size: 0.66rem;
+          letter-spacing: 0.08em;
+        }
+        .entry .price {
+          font-size: 0.76rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="masthead">
+        <h1>Festa di Natale</h1>
+        <p class="tag">anteprima · dati di esempio</p>
+      </header>
+
+      <section class="sheet">
+        <div class="sheet-head">
+          <h2>I 45 giorni</h2>
+          <p class="sheet-meta" id="indexMeta"></p>
+        </div>
+        <div class="weekdays" aria-hidden="true">
+          <span>lun</span><span>mar</span><span>mer</span><span>gio</span><span>ven</span
+          ><span>sab</span><span>dom</span>
+        </div>
+        <div class="days" id="days" role="grid" aria-label="Giorni della festa"></div>
+        <div class="legend">
+          <span><i class="on"></i> fascia riempita (mattina · pomeriggio · sera)</span>
+          <span><i></i> fascia ancora vuota</span>
+          <span><i class="closed"></i> giorno di chiusura</span>
+        </div>
+      </section>
+
+      <section class="sheet">
+        <div class="board-head">
+          <div>
+            <h2 id="boardTitle"></h2>
+            <p class="when" id="boardMeta"></p>
+          </div>
+          <div class="nav">
+            <button type="button" id="prevDay" aria-label="Giorno precedente">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M8.5 3 4.5 7l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button type="button" id="nextDay" aria-label="Giorno successivo">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M5.5 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="board" id="board" role="table" aria-label="Chi sta dove"></div>
+
+        <p class="footnote" id="boardNote">
+          <strong>La casella vuota è l'inserimento:</strong> si tocca e si sceglie solo la persona — posto e
+          fascia sono già decisi.
+        </p>
+      </section>
+    </div>
+
+    <script>
+      const VENUES = [
+        { name: 'Limonaia 1' },
+        { name: 'Limonaia 2' },
+        { name: 'Serra 1', note: 'laboratori' },
+        { name: 'Serra 2' },
+        { name: 'Palco' },
+        { name: 'Viale', note: 'parata' },
+      ]
+      const SLOTS = ['Mattina', 'Pomeriggio', 'Sera']
+      const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
+      const WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato']
+      const SHORT_MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']
+
+      const START = '2026-11-15'
+      const END = '2026-12-29'
+      const EVENT_DAYS = [
+        '2026-11-20', '2026-11-21', '2026-11-22', '2026-11-27', '2026-11-28', '2026-11-29',
+        '2026-12-04', '2026-12-05', '2026-12-06', '2026-12-07', '2026-12-08',
+        '2026-12-11', '2026-12-12', '2026-12-13',
+        '2026-12-18', '2026-12-19', '2026-12-20',
+        '2026-12-23', '2026-12-24', '2026-12-26', '2026-12-27', '2026-12-28', '2026-12-29',
+      ]
+
+      const POOL = [
+        { name: 'Coro Santa Lucia', price: 450 },
+        { name: 'Burattini di Lucca', price: 600 },
+        { name: 'Babbo Natale', price: 250 },
+        { name: 'Letture sotto l’albero', price: 300 },
+        { name: 'Cantastorie', price: 350 },
+        { name: 'Laboratorio presepi', price: 200 },
+        { name: 'Coro Gospel', price: 900 },
+        { name: 'Banda di paese', price: 400 },
+        { name: 'Gruppo musicale', price: 1200 },
+        { name: 'Parata dei pastori', price: 550 },
+        { name: 'Zampognari', price: null },
+        { name: 'Animazione bimbi', price: 380 },
+        { name: 'Coro alpino', price: 500 },
+        { name: 'Quartetto d’archi', price: 850 },
+        { name: 'Teatro dei burattini', price: 700 },
+      ]
+
+      const LOAD = { Mattina: 20, Pomeriggio: 44, Sera: 58 }
+
+      function hash(text) {
+        let value = 2166136261
+        for (let index = 0; index < text.length; index += 1) {
+          value ^= text.charCodeAt(index)
+          value = Math.imul(value, 16777619)
+        }
+        return value >>> 0
+      }
+
+      function parseDay(iso) {
+        const [y, m, d] = iso.split('-').map(Number)
+        return new Date(y, m - 1, d)
+      }
+
+      function toIso(date) {
+        const m = String(date.getMonth() + 1).padStart(2, '0')
+        const d = String(date.getDate()).padStart(2, '0')
+        return `${date.getFullYear()}-${m}-${d}`
+      }
+
+      function addDays(iso, amount) {
+        const date = parseDay(iso)
+        return toIso(new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount))
+      }
+
+      /** plan: "day|venue|slot" -> [ {name, price} ] — più voci nella stessa casella sono normali */
+      const plan = new Map()
+      const key = (day, venue, slot) => `${day}|${venue}|${slot}`
+
+      function entriesFor(day) {
+        const list = []
+        for (const venue of VENUES) {
+          for (const slot of SLOTS) {
+            for (const entry of plan.get(key(day, venue.name, slot)) ?? []) {
+              list.push({ ...entry, venue: venue.name, slot })
+            }
+          }
+        }
+        return list
+      }
+
+      function fill(day, venue, slot, entry) {
+        const mapKey = key(day, venue, slot)
+        const current = plan.get(mapKey) ?? []
+        current.push(entry)
+        plan.set(mapKey, current)
+      }
+
+      const OVERRIDES = {
+        '2026-12-24': [
+          ['Limonaia 1', 'Mattina', 'Coro Santa Lucia', 450],
+          ['Limonaia 1', 'Pomeriggio', 'Burattini di Lucca', 600],
+          ['Limonaia 1', 'Sera', 'Babbo Natale', 250],
+          ['Limonaia 2', 'Pomeriggio', 'Letture sotto l’albero', 300],
+          ['Limonaia 2', 'Sera', 'Cantastorie', 350],
+          ['Serra 1', 'Mattina', 'Laboratorio presepi', 200],
+          ['Serra 2', 'Sera', 'Coro Gospel', 900],
+          ['Palco', 'Pomeriggio', 'Banda di paese', 400],
+          ['Palco', 'Sera', 'Gruppo musicale', 1200],
+          ['Viale', 'Pomeriggio', 'Parata dei pastori', 550],
+        ],
+      }
+
+      for (const day of EVENT_DAYS) {
+        if (OVERRIDES[day]) {
+          for (const [venue, slot, name, price] of OVERRIDES[day]) fill(day, venue, slot, { name, price })
+          continue
+        }
+        for (const venue of VENUES) {
+          for (const slot of SLOTS) {
+            if (venue.name === 'Viale' && slot !== 'Pomeriggio') continue
+            if (venue.name === 'Viale' && hash(`${day}|parata`) % 100 >= 55) continue
+            const mapKey = key(day, venue.name, slot)
+            const threshold = LOAD[slot] + (venue.note === 'laboratori' ? 10 : 0) + (venue.name === 'Palco' ? 8 : 0)
+            if (hash(mapKey) % 100 >= threshold) continue
+            const used = new Set(entriesFor(day).filter((entry) => entry.slot === slot).map((entry) => entry.name))
+            let index = hash(`${mapKey}|chi`) % POOL.length
+            for (let step = 0; step < POOL.length && used.has(POOL[index].name); step += 1) {
+              index = (index + 1) % POOL.length
+            }
+            fill(day, venue.name, slot, POOL[index])
+          }
+        }
+      }
+
+      // due persone nella stessa fascia: è normale, ognuna col suo prezzo
+      const sharedDay = '2026-12-27'
+      for (const slot of SLOTS) plan.delete(key(sharedDay, 'Palco', slot))
+      fill(sharedDay, 'Palco', 'Sera', { name: 'Gruppo musicale', price: 1200 })
+      fill(sharedDay, 'Palco', 'Sera', { name: 'Animazione bimbi', price: 380 })
+
+      const money = (value) =>
+        value === null
+          ? 'da concordare'
+          : new Intl.NumberFormat('it-IT', {
+              style: 'currency',
+              currency: 'EUR',
+              useGrouping: true,
+              maximumFractionDigits: 0,
+            }).format(value)
+
+      const eventSet = new Set(EVENT_DAYS)
+      let selected = '2026-12-24'
+
+      const daysRoot = document.querySelector('#days')
+      const boardRoot = document.querySelector('#board')
+      const title = document.querySelector('#boardTitle')
+      const boardMeta = document.querySelector('#boardMeta')
+      const indexMeta = document.querySelector('#indexMeta')
+      const boardNote = document.querySelector('#boardNote')
+
+      function slotsUsed(day) {
+        const used = new Set()
+        for (const entry of entriesFor(day)) used.add(entry.slot)
+        return used
+      }
+
+      function allDays() {
+        const list = []
+        let cursor = START
+        while (cursor <= END) {
+          list.push(cursor)
+          cursor = addDays(cursor, 1)
+        }
+        return list
+      }
+
+      function renderIndex() {
+        const all = allDays()
+        const closed = all.filter((day) => !eventSet.has(day))
+        indexMeta.textContent = `${EVENT_DAYS.length} giorni di festa · ${closed.length} di chiusura · dal ${parseDay(START).getDate()} nov al ${parseDay(END).getDate()} dic`
+
+        const first = parseDay(START)
+        const offset = (first.getDay() + 6) % 7
+        const cells = []
+        for (let index = 0; index < offset; index += 1) {
+          const filler = document.createElement('div')
+          filler.setAttribute('aria-hidden', 'true')
+          filler.style.minHeight = '50px'
+          cells.push(filler)
+        }
+        for (const day of all) {
+          const date = parseDay(day)
+          const isEvent = eventSet.has(day)
+          const used = slotsUsed(day)
+          const node = document.createElement(isEvent ? 'button' : 'div')
+          node.className = `day ${isEvent ? 'is-event' : 'is-closed'}${day === selected ? ' is-selected' : ''}`
+          if (isEvent) {
+            node.type = 'button'
+            node.setAttribute('aria-pressed', day === selected ? 'true' : 'false')
+            node.setAttribute('aria-label', `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}, ${used.size} fasce su 3`)
+            node.addEventListener('click', () => {
+              selected = day
+              renderIndex()
+              renderBoard()
+            })
+          }
+          const showMonth = date.getDate() === 1 || day === START
+          node.innerHTML = `
+            <span class="num">${date.getDate()}${showMonth ? `<small>${SHORT_MONTHS[date.getMonth()]}</small>` : ''}</span>
+            ${isEvent ? `<span class="bars" aria-hidden="true">${SLOTS.map((slot) => `<i class="bar${used.has(slot) ? ' is-on' : ''}"></i>`).join('')}</span>` : ''}`
+          cells.push(node)
+        }
+        daysRoot.replaceChildren(...cells)
+      }
+
+      function renderBoard() {
+        const date = parseDay(selected)
+        const entries = entriesFor(selected)
+        title.textContent = `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`
+        const booked = new Set(entries.map((entry) => `${entry.venue}|${entry.slot}`))
+        const total = entries.reduce((sum, entry) => sum + (entry.price ?? 0), 0)
+        boardMeta.textContent = `${booked.size} caselle su ${VENUES.length * SLOTS.length} · ${money(total)}${entries.some((entry) => entry.price === null) ? ' + da concordare' : ''}`
+
+        const nodes = []
+        nodes.push(Object.assign(document.createElement('div'), { className: 'corner', textContent: 'posto' }))
+        for (const slot of SLOTS) {
+          nodes.push(Object.assign(document.createElement('div'), { className: 'col-head', textContent: slot }))
+        }
+        for (const venue of VENUES) {
+          const label = document.createElement('div')
+          label.className = 'place'
+          label.innerHTML = `${venue.name}${venue.note ? `<em>${venue.note}</em>` : ''}`
+          nodes.push(label)
+          for (const slot of SLOTS) {
+            const list = plan.get(key(selected, venue.name, slot)) ?? []
+            if (list.length === 0) {
+              const empty = document.createElement('button')
+              empty.type = 'button'
+              empty.className = 'cell is-empty'
+              empty.setAttribute('aria-label', `Libero: ${venue.name}, ${slot}, ${date.getDate()} ${MONTHS[date.getMonth()]}`)
+              empty.innerHTML = `<span>+ aggiungi</span>`
+              empty.addEventListener('click', () => {
+                boardNote.innerHTML = `<strong>${venue.name} · ${slot}:</strong> nella app si apre qui la scelta della persona, senza ridigitare posto e fascia.`
+              })
+              nodes.push(empty)
+              continue
+            }
+            const cell = document.createElement('div')
+            cell.className = 'cell'
+            cell.innerHTML = list
+              .map(
+                (entry) => `
+                <span class="entry${entry.price === null ? ' is-open' : ''}">
+                  <span class="who">${entry.name}</span>
+                  <span class="price">${money(entry.price)}</span>
+                </span>`,
+              )
+              .join('')
+            nodes.push(cell)
+          }
+        }
+        boardRoot.replaceChildren(...nodes)
+
+        boardNote.innerHTML = `<strong>La casella vuota è l’inserimento:</strong> si tocca e si sceglie solo la persona — posto e fascia sono già decisi. Più persone nella stessa fascia sono normali: ognuna col suo prezzo.`
+      }
+
+      function move(direction) {
+        const index = EVENT_DAYS.indexOf(selected)
+        const next = EVENT_DAYS[index + direction]
+        if (!next) return
+        selected = next
+        renderIndex()
+        renderBoard()
+      }
+
+      document.querySelector('#prevDay').addEventListener('click', () => move(-1))
+      document.querySelector('#nextDay').addEventListener('click', () => move(1))
+
+      renderIndex()
+      renderBoard()
+    </script>
+  </body>
+</html>

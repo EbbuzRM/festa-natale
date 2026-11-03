@@ -1,0 +1,43 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+tools/screenshots
+.vercel
+*.tsbuildinfo
+
+# agent skills e stato locale degli strumenti di design
+.claude/
+.agents/
+skills-lock.json
+
+# stato locale di impeccable (tieni solo design.json)
+.impeccable/questions/
+.impeccable/surfaces/
+.impeccable/*.png
+.impeccable/*.cache.json
+
+# ambiente e segreti
+.env
+.env.*
+*.local
+
+# log e cache
+*.log
+.cache/
+.vite/
+coverage/
+.idea/
+.vscode/
+
+# impeccable-ignore-start
+# output effimero, stato di runtime e override locali
+**/.impeccable/config.local.json
+**/.impeccable/hook.cache.json
+**/.impeccable/hook.pending.json
+**/.impeccable/*.png
+**/.impeccable/review/
+**/.impeccable/questions/
+**/.impeccable/live/
+# impeccable-ignore-end

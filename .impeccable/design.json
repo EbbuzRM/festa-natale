@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T00:00:00.000Z",
+  "title": "Design System: Festa di Natale",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Ivory Paper",
+        "canonical": "#f1ece0",
+        "tonalRamp": ["#2b2a25", "#4f4c41", "#75705f", "#9a9481", "#beb7a3", "#d6cfba", "#e6dfcf", "#f1ece0"]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet Ivory",
+        "canonical": "#fbf8f1",
+        "tonalRamp": ["#2d2c26", "#514f45", "#767364", "#9b9787", "#c0bba9", "#ddd8c8", "#f0ecdf", "#fbf8f1"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink Black-Green",
+        "canonical": "#141d17",
+        "tonalRamp": ["#141d17", "#2b372f", "#45524a", "#5d6a60", "#7e8a80", "#a4aea5", "#c8cec7", "#e9ece7"]
+      },
+      "bosco": {
+        "role": "primary",
+        "displayName": "Bosco",
+        "canonical": "#123a2b",
+        "tonalRamp": ["#0b2519", "#123a2b", "#1c5942", "#2a7457", "#479172", "#74b196", "#a9cfbd", "#dcece4"]
+      },
+      "ottone": {
+        "role": "secondary",
+        "displayName": "Ottone",
+        "canonical": "#7d5a20",
+        "tonalRamp": ["#3a2a0c", "#553c11", "#6b4b17", "#7d5a20", "#a67c33", "#c9a869", "#e2cda4", "#f4ead6"]
+      },
+      "mattone": {
+        "role": "tertiary",
+        "displayName": "Mattone",
+        "canonical": "#96322a",
+        "tonalRamp": ["#3d130f", "#5c1d18", "#7a2721", "#96322a", "#b9584c", "#d38d84", "#ebc3bd", "#f8e7e4"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page title and event name, once per screen." },
+      "total": { "displayName": "Total", "purpose": "The closing figure of the account block." },
+      "body": { "displayName": "Body", "purpose": "Prose, banners, form text." },
+      "title": { "displayName": "Title", "purpose": "Panel headings and contact names." },
+      "label": { "displayName": "Label", "purpose": "Field labels, status counts, slot names." }
+    },
+    "shadows": [
+      {
+        "name": "sheet-lifted",
+        "value": "0 24px 60px -28px rgba(20, 29, 23, 0.55)",
+        "purpose": "The editing dialog on desktop only. Every other surface is flat."
+      }
+    ],
+    "motion": [
+      { "name": "ease-exit", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The single authored moment: a view rises 6px in 300ms." },
+      { "name": "ease-state", "value": "0.15s ease", "purpose": "Hover and focus transitions on controls." },
+      { "name": "meter-fill", "value": "0.6s cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Budget meter width when the figure changes." }
+    ],
+    "breakpoints": [
+      { "name": "tablet", "value": "720px" },
+      { "name": "desktop", "value": "1000px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action on a screen: create a contact, save, connect the database.",
+      "html": "<button class=\"ds-btn-primary\">Nuovo contatto</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--bosco, #123a2b); color: #f4efe2; border: 1px solid var(--bosco, #123a2b); border-radius: 4px; padding: 0.56rem 0.95rem; font: 500 0.9rem/1.2 Archivo, Helvetica Neue, Arial, sans-serif; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-primary:hover { background: var(--bosco-mid, #1c5942); border-color: var(--bosco-mid, #1c5942); } .ds-btn-primary:focus-visible { outline: 2px solid var(--bosco-mid, #1c5942); outline-offset: 2px; } .ds-btn-primary:disabled { background: transparent; border-color: rgba(20,29,23,0.22); color: #5d6a60; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions that must not compete: export, import, unlink.",
+      "html": "<button class=\"ds-btn-ghost\">Scarica Excel</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--ink, #141d17); border: 1px solid rgba(20,29,23,0.22); border-radius: 4px; padding: 0.56rem 0.95rem; font: 500 0.9rem/1.2 Archivo, Helvetica Neue, Arial, sans-serif; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; } .ds-btn-ghost:hover { border-color: #5d6a60; background: rgba(20,29,23,0.03); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--bosco-mid, #1c5942); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Form field with a small uppercase label above it.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Chi ha fornito il contatto</span><input class=\"ds-input\" placeholder=\"Giulia\" /></label>",
+      "css": ".ds-field { display: grid; gap: 0.28rem; font-family: Archivo, Helvetica Neue, Arial, sans-serif; } .ds-field-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5d6a60; } .ds-input { width: 100%; background: var(--field, #fffdf8); color: var(--ink, #141d17); border: 1px solid rgba(20,29,23,0.22); border-radius: 4px; padding: 0.62rem 0.7rem; font: 400 0.94rem/1.4 Archivo, Helvetica Neue, Arial, sans-serif; caret-color: var(--bosco, #123a2b); transition: border-color 0.14s ease, box-shadow 0.14s ease; } .ds-input::placeholder { color: #5d6a60; opacity: 1; } .ds-input:focus { outline: none; border-color: var(--bosco-mid, #1c5942); box-shadow: 0 0 0 3px rgba(28,89,66,0.16); }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Category and status filters, sitting above the list they scope.",
+      "html": "<button class=\"ds-chip ds-chip-active\">Tutte <span class=\"ds-chip-count\">2</span></button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 0.35rem; background: transparent; color: #47534a; border: 1px solid rgba(20,29,23,0.22); border-radius: 3px; padding: 0.32rem 0.6rem; font: 400 0.79rem/1.3 Archivo, Helvetica Neue, Arial, sans-serif; cursor: pointer; transition: border-color 0.14s ease, color 0.14s ease; } .ds-chip:hover { border-color: #5d6a60; color: #141d17; } .ds-chip-active { background: var(--bosco, #123a2b); border-color: var(--bosco, #123a2b); color: #f4efe2; } .ds-chip-count { font-size: 0.76rem; opacity: 0.72; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Rail Navigation Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Desktop navigation on the evergreen shell, icon plus label.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-nav ds-nav-active\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 3.5h11L19 6.5v14H5z\"/><path d=\"M8.5 9h7M8.5 12.5h7M8.5 16h4\"/></svg>Regia</a><a class=\"ds-nav\" href=\"#\">Contatti</a></nav>",
+      "css": ".ds-rail { display: grid; gap: 0.15rem; background: var(--bosco, #123a2b); padding: 1.2rem 1.15rem; border-radius: 4px; font-family: Archivo, Helvetica Neue, Arial, sans-serif; } .ds-nav { display: flex; align-items: center; gap: 0.65rem; padding: 0.52rem 0.5rem; border-radius: 4px; color: rgba(239,233,220,0.82); font-size: 0.9rem; text-decoration: none; transition: background 0.15s ease, color 0.15s ease; } .ds-nav:hover { background: rgba(239,233,220,0.08); color: #fffdf6; } .ds-nav-active { background: rgba(239,233,220,0.13); color: #fffdf6; font-weight: 500; } .ds-nav:focus-visible { outline: 2px solid #c9a869; outline-offset: 2px; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "A sheet of paper holding one block of work. Never nested.",
+      "html": "<section class=\"ds-panel\"><h2 class=\"ds-panel-title\">Conto della festa</h2><p class=\"ds-panel-body\">Impegnati 1.000 € su 3.000 € disponibili.</p></section>",
+      "css": ".ds-panel { display: grid; gap: 1rem; background: var(--sheet, #fbf8f1); border: 1px solid rgba(20,29,23,0.12); border-radius: 14px; padding: 1.25rem 1.3rem; font-family: Archivo, Helvetica Neue, Arial, sans-serif; } .ds-panel-title { margin: 0; font: 600 0.95rem/1.4 Archivo, Helvetica Neue, Arial, sans-serif; color: #141d17; } .ds-panel-body { margin: 0; font-size: 0.9rem; color: #47534a; }"
+    },
+    {
+      "name": "Ledger Row",
+      "kind": "custom",
+      "description": "The signature: label, dotted leader, right-aligned tabular figure; totals close with a double rule.",
+      "html": "<dl class=\"ds-ledger\"><div class=\"ds-row\"><dt>Disponibile</dt><span class=\"ds-leader\"></span><dd>3.000 €</dd></div><div class=\"ds-row ds-row-total\"><dt>Restano</dt><span class=\"ds-leader\"></span><dd>2.000 €</dd></div></dl>",
+      "css": ".ds-ledger { display: grid; margin: 0; font-family: Archivo, Helvetica Neue, Arial, sans-serif; } .ds-row { display: grid; grid-template-columns: auto minmax(1.5rem, 1fr) auto; align-items: baseline; column-gap: 0.55rem; padding: 0.55rem 0; border-bottom: 1px solid rgba(20,29,23,0.12); } .ds-row dt { font-size: 0.92rem; color: #47534a; } .ds-leader { align-self: center; border-bottom: 1px dotted rgba(20,29,23,0.36); } .ds-row dd { margin: 0; font-size: 1.02rem; font-weight: 500; font-variant-numeric: tabular-nums lining-nums; color: #141d17; } .ds-row-total { border-top: 1px solid #141d17; border-bottom: 3px double rgba(20,29,23,0.36); padding-top: 0.7rem; } .ds-row-total dt { font-family: Spectral, Georgia, serif; font-size: 1.05rem; color: #141d17; } .ds-row-total dd { font-family: Spectral, Georgia, serif; font-size: 1.8rem; font-weight: 600; letter-spacing: -0.02em; }"
+    },
+    {
+      "name": "Status Mark",
+      "kind": "custom",
+      "description": "Contact state as a drawn square plus a small uppercase word — form and text, never colour alone.",
+      "html": "<span class=\"ds-status ds-status-on\">Confermato</span> <span class=\"ds-status ds-status-off\">Da contattare</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 0.35rem; font: 600 0.73rem/1.3 Archivo, Helvetica Neue, Arial, sans-serif; letter-spacing: 0.1em; text-transform: uppercase; color: #47534a; } .ds-status::before { content: ''; width: 7px; height: 7px; border: 1px solid currentColor; } .ds-status-on { color: #1c5942; } .ds-status-on::before { background: currentColor; } .ds-status-off { color: #5d6a60; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Il conto della festa",
+    "overview": "This is a sheet kept in the house, not a dashboard sold to a company. Every screen behaves like a printed account: a heading in a book serif, rows that align down a right edge, hairline rules instead of floating panels, and a total that closes the page with a double rule. The material is paper and ink: ivory ground, a deep green shell, brass reserved for provenance and forecast, brick reserved for money that has gone wrong. Depth is almost absent; what separates one thing from another is a 1px rule, a change of paper tone, or white space.",
+    "keyCharacteristics": [
+      "Ivory paper surfaces, deep evergreen navigation shell, brass and brick used only as meaning.",
+      "Spectral for the numbers that decide; Archivo for everything the host reads and types.",
+      "Amounts right-aligned with dotted leaders; totals closed by a double rule.",
+      "Flat by default: hairlines and tone carry structure, shadow appears only on the sheet.",
+      "Rectangular controls with 3–4px corners; no pill chrome, no decorative gradients, no grain."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Brass appears only where money is projected or a contact was passed on; brick only where money is negative or a contact is discarded.", "section": "colors" },
+      { "name": "The Tinted Ink Rule", "body": "No grey text on a coloured surface: secondary text on the green rail is warm paper at reduced opacity.", "section": "colors" },
+      { "name": "The Tabular Money Rule", "body": "Every figure that can be compared sits in tabular lining numerals and on a right edge.", "section": "typography" },
+      { "name": "The No-Eyebrow Rule", "body": "Headings carry themselves. There is no small tracked label above a page title.", "section": "typography" },
+      { "name": "The One Elevation Rule", "body": "Declare elevation once per surface: either a hairline or a shadow, never both.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do right-align every comparable amount and put a dotted leader between its label and its figure.",
+      "Do separate blocks with a 1px hairline or paper tone before reaching for a shadow.",
+      "Do keep labels at 0.75rem/600/0.08em uppercase and never below 11px.",
+      "Do set totals in Spectral and working numbers in Archivo with tabular figures.",
+      "Do draw icons as 1.5px-stroke SVG at 18–19px.",
+      "Do compress empty calendar days to one line."
+    ],
+    "donts": [
+      "Don't use cream gradients, noise overlays or striped gradients as texture.",
+      "Don't rotate labels into stamps, or use unicode glyphs as icons.",
+      "Don't use pill-shaped buttons or floating circular actions.",
+      "Don't put an eyebrow or kicker above a heading.",
+      "Don't colour the left edge of a card, or nest a panel inside a panel.",
+      "Don't show grey text on the green rail.",
+      "Don't spend Bosco on large content-area fields."
+    ]
+  }
+}
