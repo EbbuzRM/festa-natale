@@ -113,4 +113,3 @@ src/components/       dashboard, contatti, calendario, impostazioni
 
 - Niente OCR delle foto dei volantini (rimandato, come concordato).
 - Un solo account condiviso: chi entra vede tutto. Non ci sono permessi per persona.
-- I contatti non si fondono automaticamente se cambia il numero di telefono.

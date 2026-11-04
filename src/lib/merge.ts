@@ -10,10 +10,11 @@ function normalize(value: string): string {
 
 /**
  * Chiave "umana" per riconoscere lo stesso fornitore inserito due volte:
- * nome + cognome + telefono + compagnia, normalizzati.
+ * nome + cognome + compagnia, normalizzati. Il telefono è escluso così un
+ * contatto non viene duplicato quando cambia numero.
  */
 export function contactKey(contact: Pick<Contact, 'name' | 'surname' | 'phone' | 'company'>): string {
-  return [contact.name, contact.surname, contact.phone, contact.company].map(normalize).join('|')
+  return [contact.name, contact.surname, contact.company].map(normalize).join('|')
 }
 
 export interface MergeResult {
