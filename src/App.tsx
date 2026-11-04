@@ -19,7 +19,8 @@ const NAV: { view: View; label: string; Icon: ComponentType<{ size?: number }> }
 ]
 
 export default function App() {
-  const { data, loading, mode, syncError, authRequired, saveContact, removeContact } = useStore()
+  const { data, loading, mode, syncError, pending, authRequired, saveContact, removeContact, retrySync } =
+    useStore()
   const [view, setView] = useState<View>('dashboard')
   const [editing, setEditing] = useState<Contact | null | undefined>(undefined)
   const [daysFocus, setDaysFocus] = useState<'days' | null>(null)
@@ -90,6 +91,19 @@ export default function App() {
         {syncError ? (
           <div className="banner banner-error app-banner">
             <p>{syncError}</p>
+          </div>
+        ) : null}
+        {pending > 0 ? (
+          <div className="banner banner-warn app-banner">
+            <p>
+              {pending === 1
+                ? 'Una modifica è salvata qui ma non è ancora arrivata al database.'
+                : `${pending} modifiche sono salvate qui ma non sono ancora arrivate al database.`}{' '}
+              Partono da sole appena torna la connessione.
+            </p>
+            <button type="button" className="btn btn-ghost" onClick={() => void retrySync()}>
+              Riprova ora
+            </button>
           </div>
         ) : null}
         {loading ? (

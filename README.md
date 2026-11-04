@@ -51,6 +51,11 @@ Build di produzione: `npm run build` (esce in `dist/`), anteprima con `npm run p
 Senza database i dati vivono solo nel browser del dispositivo (con export/backup manuale).
 Con un progetto Supabase gratuito i dati sono al sicuro e uguali su telefono e computer.
 
+**Senza rete non si perde niente.** Le modifiche che il database non riesce a ricevere finiscono in una
+coda salvata sul dispositivo: l'app scrive quante sono in attesa e le rimanda da sola appena torna la
+connessione, o alla riapertura. Al caricamento la copia del cloud non cancella più quel lavoro: le
+modifiche in coda vengono riapplicate sopra.
+
 1. Crea un progetto su supabase.com (piano gratuito).
 2. Apri **SQL Editor**, incolla il contenuto di [`supabase/schema.sql`](supabase/schema.sql) e premi Run.
 3. **Authentication → Users → Add user**: email e password, con *Auto Confirm User* attivo.
@@ -105,6 +110,7 @@ src/lib/entertainment.ts  contatore degli slot e ripartizione per postazione
 src/lib/merge.ts      unione contatti senza doppioni
 src/lib/excel.ts      export/import .xlsx (xlsx caricato on demand)
 src/lib/repo.ts       localStorage + Supabase, schema SQL
+src/lib/outbox.ts     coda delle modifiche non ancora inviate al cloud
 src/lib/store.tsx     stato dell'app, local-first con sincronizzazione
 src/components/       dashboard, contatti, calendario, impostazioni
 ```

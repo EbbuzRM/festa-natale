@@ -16,22 +16,27 @@ import type { DbConfig, LocalData } from './repo'
 import {
   clearLocal,
   createDb,
-  deleteAssignmentRemote,
-  deleteContactRemote,
+  emptyData,
+  hasSession,
   loadDbConfig,
   loadLocal,
   pullAll,
   pushAll,
-  pushAssignment,
-  pushContact,
-  pushSettings,
   saveDbConfig,
   saveLocal,
-  emptyData,
-  hasSession,
   signIn,
   signOut,
 } from './repo'
+import {
+  applyOps,
+  enqueue,
+  flushOutbox,
+  loadOutbox,
+  opsForData,
+  runOutboxOp,
+  saveOutbox,
+  type OutboxOp,
+} from './outbox'
 
 export type StoreMode = 'locale' | 'cloud'
 
@@ -47,6 +52,8 @@ interface StoreValue {
   mode: StoreMode
   loading: boolean
   syncError: string | null
+  /** modifiche salvate qui ma non ancora arrivate al database */
+  pending: number
   dbConfig: DbConfig | null
   saveContact: (contact: Contact) => Promise<void>
   removeContact: (id: string) => Promise<void>
@@ -74,6 +81,14 @@ function describeError(error: unknown): string {
   return String(error)
 }
 
+function pendingMessage(count: number, detail: string | null): string {
+  const head =
+    count === 1
+      ? 'Una modifica non è ancora arrivata al database.'
+      : `${count} modifiche non sono ancora arrivate al database.`
+  return detail ? `${head} Ultimo errore: ${detail}` : head
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<LocalData>(() => loadLocal())
   const [mode, setMode] = useState<StoreMode>('locale')
@@ -81,14 +96,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [syncError, setSyncError] = useState<string | null>(null)
   const [dbConfig, setDbConfig] = useState<DbConfig | null>(null)
   const [authRequired, setAuthRequired] = useState(false)
+  const [pending, setPending] = useState(() => loadOutbox().length)
   const clientRef = useRef<SupabaseClient | null>(null)
+  const configRef = useRef<DbConfig | null>(null)
   const readyRef = useRef(false)
+
+  const flushPending = useCallback(async (client: SupabaseClient) => {
+    const result = await flushOutbox(client, loadOutbox())
+    setPending(result.remaining.length)
+    return result
+  }, [])
+
+  const queueMany = useCallback((ops: OutboxOp[]) => {
+    let next = loadOutbox()
+    for (const op of ops) next = enqueue(next, op)
+    saveOutbox(next)
+    setPending(next.length)
+    return next.length
+  }, [])
+
+  const queue = useCallback((op: OutboxOp) => queueMany([op]), [queueMany])
+
+  /** Prende la copia del cloud ma ci rimette sopra le modifiche ancora in coda. */
+  const adopt = useCallback((remote: LocalData) => {
+    const merged = applyOps(remote, loadOutbox())
+    setData(merged)
+    saveLocal(merged)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     async function start() {
       const config = loadDbConfig()
+      configRef.current = config
       setDbConfig(config)
       if (!config) {
         readyRef.current = true
@@ -107,25 +148,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (!cancelled) setAuthRequired(true)
           return
         }
+        // prima quello che era rimasto in sospeso, poi la copia del cloud
+        const flushed = await flushPending(client)
+        if (cancelled) return
         const remote = await pullAll(client)
         if (cancelled) return
         const local = loadLocal()
 
-        if (remote.contacts.length === 0 && local.contacts.length > 0) {
+        if (remote.contacts.length === 0 && local.contacts.length > 0 && loadOutbox().length === 0) {
           // primo collegamento: porto in cloud quello che c'è già sul dispositivo
           await pushAll(client, local)
           if (cancelled) return
         } else {
-          setData(remote)
-          saveLocal(remote)
+          adopt(remote)
         }
         setMode('cloud')
-        setSyncError(null)
+        setSyncError(
+          flushed.remaining.length === 0
+            ? null
+            : pendingMessage(flushed.remaining.length, flushed.error),
+        )
       } catch (error) {
         if (cancelled) return
         clientRef.current = null
         setMode('locale')
-        setSyncError(`Database non raggiungibile: ${describeError(error)}`)
+        const queued = loadOutbox().length
+        setSyncError(
+          queued > 0
+            ? `Database non raggiungibile: ${describeError(error)}. ${pendingMessage(queued, null)}`
+            : `Database non raggiungibile: ${describeError(error)}`,
+        )
       } finally {
         if (!cancelled) {
           readyRef.current = true
@@ -138,23 +190,50 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [adopt, flushPending])
 
   useEffect(() => {
     if (!readyRef.current) return
     saveLocal(data)
   }, [data])
 
-  const push = useCallback(async (action: (client: SupabaseClient) => Promise<void>) => {
-    const client = clientRef.current
-    if (!client) return
-    try {
-      await action(client)
-      setSyncError(null)
-    } catch (error) {
-      setSyncError(describeError(error))
-    }
-  }, [])
+  /**
+   * Manda una modifica al database. Se non riesce, la mette in coda invece di
+   * buttarla: senza rete il lavoro fatto resta e riparte da solo più tardi.
+   */
+  const push = useCallback(
+    async (op: OutboxOp) => {
+      const client = clientRef.current
+      if (!client) {
+        // nessun database configurato: l'app vive solo su questo dispositivo
+        if (!configRef.current) return
+        queue(op)
+        setSyncError(
+          'Sei senza rete: la modifica è salvata su questo dispositivo e parte appena torna la connessione.',
+        )
+        return
+      }
+
+      try {
+        await runOutboxOp(client, op)
+        setSyncError(null)
+      } catch (error) {
+        queue(op)
+        setSyncError(
+          `Salvataggio non riuscito (${describeError(error)}): la modifica resta salvata qui e parte appena torna la connessione.`,
+        )
+        return
+      }
+
+      if (loadOutbox().length > 0) {
+        const result = await flushPending(client)
+        if (result.remaining.length > 0) {
+          setSyncError(pendingMessage(result.remaining.length, result.error))
+        }
+      }
+    },
+    [flushPending, queue],
+  )
 
   const saveContact = useCallback(
     async (contact: Contact) => {
@@ -173,7 +252,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : [stamped, ...current.contacts],
         }
       })
-      await push((client) => pushContact(client, stamped))
+      await push({ kind: 'contact', value: stamped })
     },
     [push],
   )
@@ -185,7 +264,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         contacts: current.contacts.filter((contact) => contact.id !== id),
         assignments: current.assignments.filter((assignment) => assignment.contactId !== id),
       }))
-      await push((client) => deleteContactRemote(client, id))
+      await push({ kind: 'contact-delete', id })
     },
     [push],
   )
@@ -207,7 +286,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : [...current.assignments, stamped],
         }
       })
-      await push((client) => pushAssignment(client, stamped))
+      await push({ kind: 'assignment', value: stamped })
     },
     [push],
   )
@@ -218,7 +297,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...current,
         assignments: current.assignments.filter((assignment) => assignment.id !== id),
       }))
-      await push((client) => deleteAssignmentRemote(client, id))
+      await push({ kind: 'assignment-delete', id })
     },
     [push],
   )
@@ -226,9 +305,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const saveSettings = useCallback(
     async (settings: Settings) => {
       setData((current) => ({ ...current, settings }))
-      await push((client) => pushSettings(client, settings))
+      await push({ kind: 'settings', value: settings })
     },
     [push],
+  )
+
+  /** Dopo un import massiccio: o passa tutto, o finisce tutto in coda. */
+  const pushEverything = useCallback(
+    async (next: LocalData, label: string) => {
+      const client = clientRef.current
+      if (client) {
+        try {
+          await pushAll(client, next)
+          setSyncError(null)
+          await flushPending(client)
+          return
+        } catch (error) {
+          queueMany(opsForData(next))
+          setSyncError(
+            `${label} (${describeError(error)}): i dati sono salvati qui e partono appena torna la connessione.`,
+          )
+          return
+        }
+      }
+      if (!configRef.current) return
+      queueMany(opsForData(next))
+      setSyncError(
+        `Sei senza rete: ${label.toLowerCase()}. I dati sono salvati qui e partono appena torna la connessione.`,
+      )
+    },
+    [flushPending, queueMany],
   )
 
   const importData = useCallback<StoreValue['importData']>(
@@ -247,9 +353,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       setData(next)
       saveLocal(next)
-      if (clientRef.current) {
-        await push((client) => pushAll(client, next))
-      }
+      await pushEverything(next, 'Import non ancora inviato')
       return {
         added: merged.added,
         updated: merged.updated,
@@ -257,18 +361,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         assignments: newAssignments.length,
       }
     },
-    [data, push],
+    [data, pushEverything],
   )
 
   const replaceAll = useCallback(
     async (next: LocalData) => {
       setData(next)
       saveLocal(next)
-      if (clientRef.current) {
-        await push((client) => pushAll(client, next))
-      }
+      await pushEverything(next, 'Ripristino non ancora inviato')
     },
-    [push],
+    [pushEverything],
   )
 
   const connectDb = useCallback(
@@ -276,6 +378,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!config) {
         saveDbConfig(null)
         setDbConfig(null)
+        configRef.current = null
         clientRef.current = null
         setMode('locale')
         setSyncError(null)
@@ -285,6 +388,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const client = await createDb(config)
       const probe = await client.from('settings').select('id').limit(1)
       if (probe.error) throw new Error(`Database non raggiungibile: ${probe.error.message}`)
+      configRef.current = config
       if (!(await hasSession(client))) {
         // config salvata, ma senza login non si legge niente: si passa dall'accesso
         saveDbConfig(config)
@@ -293,21 +397,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAuthRequired(true)
         return
       }
+      const flushed = await flushPending(client)
       const remote = await pullAll(client)
       saveDbConfig(config)
       setDbConfig(config)
       clientRef.current = client
       setMode('cloud')
-      setSyncError(null)
 
-      if (remote.contacts.length === 0 && data.contacts.length > 0) {
+      if (remote.contacts.length === 0 && data.contacts.length > 0 && loadOutbox().length === 0) {
         await pushAll(client, data)
       } else {
-        setData(remote)
-        saveLocal(remote)
+        adopt(remote)
       }
+      setSyncError(
+        flushed.remaining.length === 0
+          ? null
+          : pendingMessage(flushed.remaining.length, flushed.error),
+      )
     },
-    [data],
+    [data, adopt, flushPending],
   )
 
   const login = useCallback(
@@ -316,19 +424,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const client = clientRef.current ?? (await createDb(dbConfig))
       await signIn(client, email, password)
       clientRef.current = client
+      configRef.current = dbConfig
+      // le modifiche fatte prima dell'accesso partono adesso
+      const flushed = await flushPending(client)
       const remote = await pullAll(client)
       const local = loadLocal()
-      if (remote.contacts.length === 0 && local.contacts.length > 0) {
+      if (remote.contacts.length === 0 && local.contacts.length > 0 && loadOutbox().length === 0) {
         await pushAll(client, local)
       } else {
-        setData(remote)
-        saveLocal(remote)
+        adopt(remote)
       }
       setMode('cloud')
       setAuthRequired(false)
-      setSyncError(null)
+      setSyncError(
+        flushed.remaining.length === 0
+          ? null
+          : pendingMessage(flushed.remaining.length, flushed.error),
+      )
     },
-    [dbConfig],
+    [dbConfig, adopt, flushPending],
   )
 
   const logout = useCallback(async () => {
@@ -336,22 +450,59 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setMode('locale')
     setAuthRequired(true)
     setSyncError(null)
+    // la coda resta: chi rientra la ritrova
+    clientRef.current = null
     if (client) await signOut(client)
   }, [])
 
+  /** Riprova il collegamento e manda quello che è rimasto in coda. */
   const retrySync = useCallback(async () => {
-    const client = clientRef.current
-    if (!client) return
+    const config = configRef.current ?? loadDbConfig()
+    if (!config) return
+    let client = clientRef.current
+
     try {
-      await pushAll(client, data)
+      if (!client) {
+        client = await createDb(config)
+        const probe = await client.from('settings').select('id').limit(1)
+        if (probe.error) throw new Error(probe.error.message)
+        clientRef.current = client
+        configRef.current = config
+        if (!(await hasSession(client))) {
+          setAuthRequired(true)
+          return
+        }
+      }
+
+      const result = await flushPending(client)
+      if (result.remaining.length > 0) {
+        setSyncError(pendingMessage(result.remaining.length, result.error))
+        return
+      }
+
+      const remote = await pullAll(client)
+      adopt(remote)
+      setMode('cloud')
       setSyncError(null)
     } catch (error) {
-      setSyncError(describeError(error))
+      clientRef.current = null
+      setSyncError(`Database non raggiungibile: ${describeError(error)}`)
     }
-  }, [data])
+  }, [adopt, flushPending])
+
+  // al ritorno della rete la coda riparte da sola, senza toccare niente
+  useEffect(() => {
+    const handleOnline = () => {
+      void retrySync()
+    }
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
+  }, [retrySync])
 
   const resetAll = useCallback(() => {
     clearLocal()
+    saveOutbox([])
+    setPending(0)
     setData(emptyData())
   }, [])
 
@@ -361,6 +512,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       mode,
       loading,
       syncError,
+      pending,
       dbConfig,
       saveContact,
       removeContact,
@@ -381,6 +533,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       mode,
       loading,
       syncError,
+      pending,
       dbConfig,
       saveContact,
       removeContact,
