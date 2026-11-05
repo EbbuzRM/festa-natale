@@ -14,8 +14,11 @@ import type { Assignment, Contact, Settings } from './types'
 import { nowIso } from './types'
 import type { DbConfig, LocalData } from './repo'
 import {
+  claimDevice,
   clearLocal,
   createDb,
+  deviceId,
+  deviceState,
   emptyData,
   hasSession,
   loadDbConfig,
@@ -68,6 +71,8 @@ interface StoreValue {
   replaceAll: (data: LocalData) => Promise<void>
   connectDb: (config: DbConfig | null) => Promise<void>
   authRequired: boolean
+  /** messaggio mostrato nella schermata di accesso (es. sessione presa altrove) */
+  sessionNotice: string | null
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   retrySync: () => Promise<void>
@@ -96,6 +101,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [syncError, setSyncError] = useState<string | null>(null)
   const [dbConfig, setDbConfig] = useState<DbConfig | null>(null)
   const [authRequired, setAuthRequired] = useState(false)
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const [pending, setPending] = useState(() => loadOutbox().length)
   const clientRef = useRef<SupabaseClient | null>(null)
   const configRef = useRef<DbConfig | null>(null)
@@ -148,6 +154,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (!cancelled) setAuthRequired(true)
           return
         }
+        // questo dispositivo prende la sessione: se la stava usando un altro, quello esce
+        await claimDevice(client, deviceId()).catch(() => false)
         // prima quello che era rimasto in sospeso, poi la copia del cloud
         const flushed = await flushPending(client)
         if (cancelled) return
@@ -397,6 +405,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAuthRequired(true)
         return
       }
+      await claimDevice(client, deviceId()).catch(() => false)
       const flushed = await flushPending(client)
       const remote = await pullAll(client)
       saveDbConfig(config)
@@ -423,6 +432,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!dbConfig) throw new Error('Database non configurato: manca URL o chiave.')
       const client = clientRef.current ?? (await createDb(dbConfig))
       await signIn(client, email, password)
+      // appena si entra, la sessione è di questo dispositivo
+      await claimDevice(client, deviceId()).catch(() => false)
+      setSessionNotice(null)
       clientRef.current = client
       configRef.current = dbConfig
       // le modifiche fatte prima dell'accesso partono adesso
@@ -449,10 +461,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const client = clientRef.current
     setMode('locale')
     setAuthRequired(true)
+    setSessionNotice(null)
     setSyncError(null)
     // la coda resta: chi rientra la ritrova
     clientRef.current = null
     if (client) await signOut(client)
+  }, [])
+
+  /**
+   * Chiude la sessione qui senza revocarla: serve quando un altro dispositivo
+   * l'ha appena presa e non va buttato fuori a sua volta.
+   */
+  const endSession = useCallback(async (notice: string | null) => {
+    const client = clientRef.current
+    clientRef.current = null
+    setMode('locale')
+    setAuthRequired(true)
+    setSessionNotice(notice)
+    setSyncError(null)
+    if (client) await signOut(client, 'local')
   }, [])
 
   /** Riprova il collegamento e manda quello che è rimasto in coda. */
@@ -499,6 +526,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('online', handleOnline)
   }, [retrySync])
 
+  // Un dispositivo alla volta: chi si collega prende la sessione, l'altro esce.
+  useEffect(() => {
+    if (mode !== 'cloud') return
+    const device = deviceId()
+    let stopped = false
+
+    const check = async () => {
+      const client = clientRef.current
+      if (!client || stopped) return
+      const state = await deviceState(client, device)
+      if (stopped || state !== 'other') return
+      stopped = true
+      await endSession(
+        'La sessione è passata a un altro dispositivo: qui sei uscito. Se rientri, la riprendi tu.',
+      )
+    }
+
+    const timer = window.setInterval(() => void check(), 15_000)
+    const onFocus = () => void check()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void check()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [mode, endSession])
+
   const resetAll = useCallback(() => {
     clearLocal()
     saveOutbox([])
@@ -523,6 +582,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       replaceAll,
       connectDb,
       authRequired,
+      sessionNotice,
       login,
       logout,
       retrySync,
@@ -544,6 +604,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       replaceAll,
       connectDb,
       authRequired,
+      sessionNotice,
       login,
       logout,
       retrySync,

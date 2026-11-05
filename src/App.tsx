@@ -2,20 +2,38 @@ import { useState, type ComponentType } from 'react'
 import { Dashboard } from './components/Dashboard'
 import { ContactsView } from './components/ContactsView'
 import { CalendarView } from './components/CalendarView'
+import { ListsView } from './components/ListsView'
+import { NotesView } from './components/NotesView'
 import { SettingsView } from './components/SettingsView'
 import { ContactEditor } from './components/ContactEditor'
 import { LoginScreen } from './components/LoginScreen'
-import { IconBook, IconCalendar, IconLedger, IconPlus, IconSliders } from './components/icons'
+import {
+  IconBook,
+  IconCalendar,
+  IconLedger,
+  IconList,
+  IconNote,
+  IconPlus,
+  IconSliders,
+} from './components/icons'
 import { useStore } from './lib/store'
 import type { Contact } from './lib/types'
 
-type View = 'dashboard' | 'contatti' | 'calendario' | 'impostazioni'
+type View = 'dashboard' | 'contatti' | 'calendario' | 'liste' | 'appunti' | 'impostazioni'
 
-const NAV: { view: View; label: string; Icon: ComponentType<{ size?: number }> }[] = [
+const NAV: {
+  view: View
+  label: string
+  /** etichetta corta per la barra in basso del telefono */
+  short?: string
+  Icon: ComponentType<{ size?: number }>
+}[] = [
   { view: 'dashboard', label: 'Regia', Icon: IconLedger },
   { view: 'contatti', label: 'Contatti', Icon: IconBook },
   { view: 'calendario', label: 'Calendario', Icon: IconCalendar },
-  { view: 'impostazioni', label: 'Impostazioni', Icon: IconSliders },
+  { view: 'liste', label: 'Liste', Icon: IconList },
+  { view: 'appunti', label: 'Appunti', Icon: IconNote },
+  { view: 'impostazioni', label: 'Impostazioni', short: 'Opzioni', Icon: IconSliders },
 ]
 
 export default function App() {
@@ -126,6 +144,10 @@ export default function App() {
               setView('impostazioni')
             }}
           />
+        ) : view === 'liste' ? (
+          <ListsView />
+        ) : view === 'appunti' ? (
+          <NotesView />
         ) : (
           <SettingsView focus={daysFocus} />
         )}
@@ -141,7 +163,7 @@ export default function App() {
             aria-current={view === item.view ? 'page' : undefined}
           >
             <item.Icon size={19} />
-            {item.label}
+            {item.short ?? item.label}
           </button>
         ))}
       </nav>

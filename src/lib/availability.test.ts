@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  isUnavailable,
+  assignmentsOutsideAvailability,
+  isAvailable,
   normalizePeriods,
+  parsePeriods,
   parsePeriodsText,
-  parseUnavailable,
   periodLabel,
   periodsToText,
-  unavailableAssignments,
-  unavailableOn,
 } from './availability'
 import { emptyContact, type Assignment } from './types'
 
@@ -31,18 +30,18 @@ describe('normalizePeriods', () => {
   })
 })
 
-describe('isUnavailable', () => {
-  const contatto = { ...emptyContact(), unavailable: [{ from: '2026-12-06', to: '2026-12-08' }] }
+describe('isAvailable', () => {
+  const disponibile = { ...emptyContact(), available: [{ from: '2026-12-06', to: '2026-12-08' }] }
 
-  it('comprende i due estremi', () => {
-    expect(isUnavailable(contatto, '2026-12-05')).toBe(false)
-    expect(isUnavailable(contatto, '2026-12-06')).toBe(true)
-    expect(isUnavailable(contatto, '2026-12-08')).toBe(true)
-    expect(isUnavailable(contatto, '2026-12-09')).toBe(false)
+  it('vale solo dentro le date che ha dato', () => {
+    expect(isAvailable(disponibile, '2026-12-05')).toBe(false)
+    expect(isAvailable(disponibile, '2026-12-06')).toBe(true)
+    expect(isAvailable(disponibile, '2026-12-08')).toBe(true)
+    expect(isAvailable(disponibile, '2026-12-09')).toBe(false)
   })
 
-  it('senza periodi è sempre disponibile', () => {
-    expect(isUnavailable(emptyContact(), '2026-12-06')).toBe(false)
+  it('senza date non ha vincoli: si può sempre scegliere', () => {
+    expect(isAvailable(emptyContact(), '2026-12-06')).toBe(true)
   })
 })
 
@@ -63,32 +62,32 @@ describe('etichette e testi', () => {
   })
 
   it('legge i periodi salvati sul database, anche scritti male', () => {
-    expect(parseUnavailable([{ from: '2026-12-06T00:00:00.000Z', to: '' }])).toEqual([
+    expect(parsePeriods([{ from: '2026-12-06T00:00:00.000Z', to: '' }])).toEqual([
       { from: '2026-12-06', to: '2026-12-06' },
     ])
-    expect(parseUnavailable('niente')).toEqual([])
-    expect(parseUnavailable([{ from: '', to: '2026-12-06' }, null])).toEqual([])
+    expect(parsePeriods('niente')).toEqual([])
+    expect(parsePeriods([{ from: '', to: '2026-12-06' }, null])).toEqual([])
   })
 })
 
 describe('incroci col calendario', () => {
-  const libero = { ...emptyContact(), id: 'a', name: 'Zampognari' }
-  const occupato = {
+  const senzaDate = { ...emptyContact(), id: 'a', name: 'Zampognari' }
+  const conDate = {
     ...emptyContact(),
     id: 'b',
     name: 'Coro',
-    unavailable: [{ from: '2026-12-06', to: '2026-12-07' }],
+    available: [{ from: '2026-12-06', to: '2026-12-07' }],
   }
   const scartato = {
     ...emptyContact(),
     id: 'c',
     name: 'Banda',
     status: 'scartato' as const,
-    unavailable: [{ from: '2026-12-06', to: '2026-12-07' }],
+    available: [{ from: '2026-12-06', to: '2026-12-07' }],
   }
 
   const assignment = (contactId: string, day: string): Assignment => ({
-    id: `ass-${contactId}`,
+    id: `ass-${contactId}-${day}`,
     contactId,
     day,
     slot: 'sera',
@@ -98,19 +97,15 @@ describe('incroci col calendario', () => {
     updatedAt: '',
   })
 
-  it('elenca chi non c’è in un giorno, senza gli scartati', () => {
-    expect(unavailableOn([libero, occupato, scartato], '2026-12-06').map((c) => c.id)).toEqual(['b'])
-    expect(unavailableOn([libero, occupato], '2026-12-12')).toEqual([])
-  })
-
-  it('trova gli appuntamenti che cadono in un giorno di indisponibilità', () => {
+  it('segnala solo gli appuntamenti fuori dalle date in cui può venire', () => {
     const items = [
       assignment('b', '2026-12-06'),
-      assignment('a', '2026-12-06'),
-      assignment('c', '2026-12-07'),
+      assignment('b', '2026-12-12'),
+      assignment('a', '2026-12-28'),
+      assignment('c', '2026-12-12'),
     ]
-    expect(unavailableAssignments(items, [libero, occupato, scartato]).map((item) => item.id)).toEqual([
-      'ass-b',
+    expect(assignmentsOutsideAvailability(items, [senzaDate, conDate, scartato]).map((item) => item.id)).toEqual([
+      'ass-b-2026-12-12',
     ])
   })
 })

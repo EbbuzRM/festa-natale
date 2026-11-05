@@ -1,14 +1,25 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { parseUnavailable } from './availability'
+import { normalizeStoredContact, parsePeriods } from './availability'
 import { defaultEventDays } from './format'
-import type { Assignment, Category, Contact, Settings, Slot, Status, Todo } from './types'
+import type {
+  Assignment,
+  Category,
+  Contact,
+  ListItem,
+  Note,
+  PartyList,
+  Settings,
+  Slot,
+  Status,
+  Todo,
+} from './types'
 import {
   DEFAULT_ENTERTAINMENT_TARGET,
   DEFAULT_VENUES,
-  emptyContact,
   isCategory,
   isSlot,
   isStatus,
+  newId,
   nowIso,
 } from './types'
 
@@ -38,6 +49,8 @@ export function defaultSettings(): Settings {
     venues: [...DEFAULT_VENUES],
     entertainmentTarget: DEFAULT_ENTERTAINMENT_TARGET,
     todos: [],
+    lists: [],
+    notes: [],
   }
 }
 
@@ -94,9 +107,7 @@ export function loadLocal(): LocalData {
     if (!parsed || typeof parsed !== 'object') return emptyData()
     const defaults = defaultSettings()
     return {
-      contacts: Array.isArray(parsed.contacts)
-        ? parsed.contacts.map((contact) => ({ ...emptyContact(), ...contact }))
-        : [],
+      contacts: Array.isArray(parsed.contacts) ? parsed.contacts.map(normalizeStoredContact) : [],
       assignments: Array.isArray(parsed.assignments)
         ? parsed.assignments.map((assignment) => ({ ...assignment, venue: assignment.venue ?? '' }))
         : [],
@@ -139,8 +150,51 @@ export async function signIn(
   if (error) throw new Error(authMessage(error.message))
 }
 
-export async function signOut(client: SupabaseClient): Promise<void> {
-  await client.auth.signOut()
+export async function signOut(
+  client: SupabaseClient,
+  scope: 'global' | 'local' | 'others' = 'global',
+): Promise<void> {
+  await client.auth.signOut({ scope })
+}
+
+const DEVICE_KEY = 'festa-natale.device.v1'
+let fallbackDevice = ''
+
+/** Identificativo stabile di questo browser: serve a capire chi ha preso la sessione. */
+export function deviceId(): string {
+  try {
+    const saved = localStorage.getItem(DEVICE_KEY)
+    if (saved) return saved
+    const created = newId()
+    localStorage.setItem(DEVICE_KEY, created)
+    return created
+  } catch {
+    if (!fallbackDevice) fallbackDevice = newId()
+    return fallbackDevice
+  }
+}
+
+/** Segna questo dispositivo come quello attivo: gli altri se ne accorgono e si disconnettono. */
+export async function claimDevice(client: SupabaseClient, device: string): Promise<boolean> {
+  const { data } = await client.auth.getUser()
+  if (data.user?.user_metadata?.active_device === device) return true
+  const { error } = await client.auth.updateUser({ data: { active_device: device } })
+  return !error
+}
+
+/**
+ * `other` quando un altro dispositivo ha preso la sessione; `unknown` quando il
+ * server non risponde, così un problema di rete non butta fuori nessuno.
+ */
+export async function deviceState(
+  client: SupabaseClient,
+  device: string,
+): Promise<'active' | 'other' | 'unknown'> {
+  const { data, error } = await client.auth.getUser()
+  if (error) return 'unknown'
+  const active = data.user?.user_metadata?.active_device
+  if (typeof active !== 'string' || !active) return 'active'
+  return active === device ? 'active' : 'other'
 }
 
 /** Le risposte di Supabase Auth sono in inglese: qui diventano comprensibili. */
@@ -169,7 +223,9 @@ interface ContactRow {
   origin: string | null
   status: string | null
   notes: string | null
-  unavailable: unknown
+  available: unknown
+  /** colonna dei database creati prima: conteneva le stesse date */
+  unavailable?: unknown
   created_at: string | null
   updated_at: string | null
 }
@@ -193,6 +249,8 @@ interface SettingsRow {
   venues: unknown
   entertainment_target: number | string | null
   todos: unknown
+  lists: unknown
+  notes: unknown
 }
 
 function text(value: string | null | undefined): string {
@@ -222,7 +280,7 @@ function toContact(row: ContactRow): Contact {
     origin: text(row.origin),
     status: isStatus(row.status) ? row.status : ('da_contattare' satisfies Status),
     notes: text(row.notes),
-    unavailable: parseUnavailable(row.unavailable),
+    available: parsePeriods(row.available ?? row.unavailable),
     createdAt: text(row.created_at) || nowIso(),
     updatedAt: text(row.updated_at) || nowIso(),
   }
@@ -245,7 +303,7 @@ export function contactToRow(contact: Contact) {
     origin: contact.origin,
     status: contact.status,
     notes: contact.notes,
-    unavailable: contact.unavailable,
+    available: contact.available,
     created_at: contact.createdAt,
     updated_at: contact.updatedAt,
   }
@@ -303,6 +361,62 @@ function toTodos(value: unknown): Todo[] {
   })
 }
 
+function toListItems(value: unknown): ListItem[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const candidate = item as Partial<ListItem>
+    const label = text(candidate.text).trim()
+    if (!label) return []
+    return [
+      {
+        id: text(candidate.id) || `riga-${Math.random().toString(16).slice(2, 10)}`,
+        text: label,
+        done: candidate.done === true,
+        createdAt: text(candidate.createdAt) || nowIso(),
+      },
+    ]
+  })
+}
+
+function toLists(value: unknown): PartyList[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const candidate = item as Partial<PartyList>
+    const name = text(candidate.name).trim()
+    if (!name) return []
+    return [
+      {
+        id: text(candidate.id) || `lista-${Math.random().toString(16).slice(2, 10)}`,
+        name,
+        items: toListItems(candidate.items),
+      },
+    ]
+  })
+}
+
+function toNotes(value: unknown): Note[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const candidate = item as Partial<Note>
+    const title = text(candidate.title).trim()
+    const body = text(candidate.text)
+    if (!title && !body.trim()) return []
+    const stamp = text(candidate.createdAt) || nowIso()
+    return [
+      {
+        id: text(candidate.id) || `nota-${Math.random().toString(16).slice(2, 10)}`,
+        title: title || 'Senza titolo',
+        text: body,
+        createdAt: stamp,
+        updatedAt: text(candidate.updatedAt) || stamp,
+      },
+    ]
+  })
+}
+
 function toSettings(row: SettingsRow | null): Settings | null {
   if (!row) return null
   const days = toTextList(row.event_days)
@@ -315,6 +429,8 @@ function toSettings(row: SettingsRow | null): Settings | null {
     entertainmentTarget:
       target === null ? DEFAULT_ENTERTAINMENT_TARGET : Math.max(0, Math.round(target)),
     todos: toTodos(row.todos),
+    lists: toLists(row.lists),
+    notes: toNotes(row.notes),
   }
 }
 
@@ -373,6 +489,8 @@ export async function pushSettings(client: SupabaseClient, settings: Settings): 
       venues: settings.venues,
       entertainment_target: settings.entertainmentTarget,
       todos: settings.todos,
+      lists: settings.lists,
+      notes: settings.notes,
       updated_at: nowIso(),
     },
     { onConflict: 'id' },
@@ -414,7 +532,7 @@ create table if not exists public.contacts (
   origin text not null default '',
   status text not null default 'da_contattare',
   notes text not null default '',
-  unavailable jsonb not null default '[]'::jsonb,
+  available jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -439,16 +557,32 @@ create table if not exists public.settings (
   venues jsonb not null default '[]'::jsonb,
   entertainment_target int not null default 30,
   todos jsonb not null default '[]'::jsonb,
+  lists jsonb not null default '[]'::jsonb,
+  notes jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
 insert into public.settings (id) values (1) on conflict (id) do nothing;
 
 -- database già creato in passato: aggiunge solo le colonne nuove, senza toccare i dati
-alter table public.contacts add column if not exists unavailable jsonb not null default '[]'::jsonb;
+alter table public.contacts add column if not exists available jsonb not null default '[]'::jsonb;
+-- le date salvate prima si chiamavano "unavailable": erano già i giorni in cui può venire
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'contacts' and column_name = 'unavailable'
+  ) then
+    update public.contacts
+    set available = unavailable
+    where available = '[]'::jsonb and unavailable <> '[]'::jsonb;
+  end if;
+end $$;
 alter table public.assignments add column if not exists venue text not null default '';
 alter table public.settings add column if not exists venues jsonb not null default '[]'::jsonb;
 alter table public.settings add column if not exists entertainment_target int not null default 30;
 alter table public.settings add column if not exists todos jsonb not null default '[]'::jsonb;
+alter table public.settings add column if not exists lists jsonb not null default '[]'::jsonb;
+alter table public.settings add column if not exists notes jsonb not null default '[]'::jsonb;
 
 alter table public.contacts enable row level security;
 alter table public.assignments enable row level security;

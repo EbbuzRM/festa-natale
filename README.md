@@ -8,7 +8,8 @@ computer, installabile sul telefono e funzionante offline.
 
 - **Contatti** — nome, cognome, compagnia, categoria (Artisti / Materiali / Servizi), tipo di
   servizio, telefono, WhatsApp, email, prezzo richiesto, **chi ha fornito il contatto**, provenienza,
-  stato (da contattare / contattato / confermato / scartato), note e **periodi di indisponibilità**.
+  stato (da contattare / contattato / confermato / scartato), note e **date in cui può venire**
+  (i giorni in cui è disponibile: fuori da quelli l'app non lo propone).
 - **Inserimento rapido** — obbligatorio solo il nome: il resto si completa dopo.
 - **Regia (dashboard)** — budget disponibile, quanto è impegnato dai confermati, previsione con i
   contattati, residuo, conteggi per categoria e stato, cose da sistemare.
@@ -17,11 +18,14 @@ computer, installabile sul telefono e funzionante offline.
   già decisi. Più persone nella stessa casella sono normali. Sotto, l'indice di tutti i giorni
   dell'evento (settimane vere, giorni di chiusura tratteggiati) per saltare a una data.
   I contatti **scartati** restano solo in rubrica: non compaiono qui né nelle liste di scelta. Chi ha
-  segnato di non esserci in un giorno è scritto sotto il tabellone, segnato accanto all'appuntamento e
-  non si può scegliere nella lista di quel giorno.
+  dato le date in cui può venire si sceglie solo in quei giorni; chi non ha date è disponibile sempre.
 - **Intrattenimento** — contatore degli slot da riempire (default 30) con quanto manca, e per ogni
   appuntamento la **postazione** (limonaia, serra, palco…): il conto si spezza per postazione.
 - **Cose da fare** — lista di attività con spunta, salvata insieme all'evento.
+- **Liste** — acquisti, giochi, cose da portare: i nomi si creano dalle **Impostazioni**, le righe
+  (testo o link) si aggiungono e si spuntano dalla sezione **Liste** della barra laterale.
+- **Appunti** — riunioni, telefonate e idee con titolo e testo, modificabili, nella sezione
+  **Appunti** della barra laterale.
 - **Excel** — export con tre fogli (Contatti, Calendario, Budget) e re-import senza doppioni.
 - **Backup JSON** completo.
 
@@ -70,6 +74,10 @@ Lo stesso schema è copiabile dall'app col pulsante «Copia schema SQL».
 > Sicurezza: le tre tabelle hanno RLS con policy `to authenticated`. Senza login la chiave
 > publishable non legge e non scrive niente (verificato: 0 righe in lettura, insert respinto).
 > Chi ha l'account vede e modifica tutto: la password è l'unica protezione, tienila privata.
+
+Una sessione per volta: quando un dispositivo entra (o riapre l'app con la sessione già salvata)
+prende il comando, e l'altro viene disconnesso entro pochi secondi con un avviso. Da lì può
+rientrare e riprendere lui la sessione.
 
 ## Deploy su GitHub Pages
 

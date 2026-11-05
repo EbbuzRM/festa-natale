@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../lib/store'
 import type { LocalData } from '../lib/repo'
 import { SCHEMA_SQL } from '../lib/repo'
+import { emptyList, type PartyList } from '../lib/types'
 import { buildWorkbook, downloadWorkbook, parseWorkbook } from '../lib/excel'
 import { dayRunLabel, daysInRange, defaultEventDays, formatAmount, groupDayRuns, money, plural } from '../lib/format'
 import { IconClose } from './icons'
@@ -33,6 +34,7 @@ export function SettingsView({ focus }: Props) {
   const [rangeEnd, setRangeEnd] = useState('')
   const [rangeError, setRangeError] = useState<string | null>(null)
   const [newVenue, setNewVenue] = useState('')
+  const [newList, setNewList] = useState('')
   const [url, setUrl] = useState(dbConfig?.url ?? '')
   const [anonKey, setAnonKey] = useState(dbConfig?.anonKey ?? '')
   const [dbMessage, setDbMessage] = useState<string | null>(null)
@@ -85,6 +87,25 @@ export function SettingsView({ focus }: Props) {
 
   const setVenues = (venues: string[]) => {
     void saveSettings({ ...settings, venues: [...new Set(venues)] })
+  }
+
+  const addList = () => {
+    const name = newList.trim().replace(/\s+/g, ' ')
+    if (!name) return
+    setNewList('')
+    const exists = settings.lists.some((list) => list.name.toLowerCase() === name.toLowerCase())
+    if (exists) return
+    void saveSettings({ ...settings, lists: [...settings.lists, emptyList(name)] })
+  }
+
+  const removeList = (list: PartyList) => {
+    if (
+      list.items.length > 0 &&
+      !window.confirm(`Togliere «${list.name}» e le ${list.items.length} righe dentro?`)
+    ) {
+      return
+    }
+    void saveSettings({ ...settings, lists: settings.lists.filter((item) => item.id !== list.id) })
   }
 
   const commitTarget = (raw: string) => {
@@ -281,6 +302,48 @@ export function SettingsView({ focus }: Props) {
         </div>
         <p className="muted small">
           Ogni artista messo in calendario riempie uno slot; la postazione dice dove suona.
+        </p>
+      </article>
+
+      <article className="panel">
+        <header className="panel-head">
+          <h2>Liste</h2>
+          <span className="muted small">acquisti, giochi, cose da portare</span>
+        </header>
+        <div className="field">
+          <span className="field-label">Le tue liste</span>
+          <ul className="day-chips">
+            {settings.lists.map((list) => (
+              <li key={list.id}>
+                <span>{list.name}</span>
+                <button
+                  type="button"
+                  aria-label={`Togli ${list.name}`}
+                  onClick={() => removeList(list)}
+                >
+                  <IconClose size={13} />
+                </button>
+              </li>
+            ))}
+            {settings.lists.length === 0 ? <li className="muted">Nessuna lista.</li> : null}
+          </ul>
+        </div>
+        <div className="inline-form">
+          <input
+            value={newList}
+            onChange={(event) => setNewList(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') addList()
+            }}
+            placeholder="Acquisti, Giochi di società…"
+            aria-label="Nuova lista"
+          />
+          <button type="button" className="btn btn-ghost" disabled={!newList.trim()} onClick={addList}>
+            Aggiungi lista
+          </button>
+        </div>
+        <p className="muted small">
+          Qui si creano solo i nomi: le righe e le spunte si gestiscono dalla sezione Liste.
         </p>
       </article>
 

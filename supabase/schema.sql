@@ -15,7 +15,7 @@ create table if not exists public.contacts (
   origin text not null default '',
   status text not null default 'da_contattare',
   notes text not null default '',
-  unavailable jsonb not null default '[]'::jsonb,
+  available jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -40,16 +40,32 @@ create table if not exists public.settings (
   venues jsonb not null default '[]'::jsonb,
   entertainment_target int not null default 30,
   todos jsonb not null default '[]'::jsonb,
+  lists jsonb not null default '[]'::jsonb,
+  notes jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
 insert into public.settings (id) values (1) on conflict (id) do nothing;
 
 -- database già creato in passato: aggiunge solo le colonne nuove, senza toccare i dati
-alter table public.contacts add column if not exists unavailable jsonb not null default '[]'::jsonb;
+alter table public.contacts add column if not exists available jsonb not null default '[]'::jsonb;
+-- le date salvate prima si chiamavano "unavailable": erano già i giorni in cui può venire
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'contacts' and column_name = 'unavailable'
+  ) then
+    update public.contacts
+    set available = unavailable
+    where available = '[]'::jsonb and unavailable <> '[]'::jsonb;
+  end if;
+end $$;
 alter table public.assignments add column if not exists venue text not null default '';
 alter table public.settings add column if not exists venues jsonb not null default '[]'::jsonb;
 alter table public.settings add column if not exists entertainment_target int not null default 30;
 alter table public.settings add column if not exists todos jsonb not null default '[]'::jsonb;
+alter table public.settings add column if not exists lists jsonb not null default '[]'::jsonb;
+alter table public.settings add column if not exists notes jsonb not null default '[]'::jsonb;
 
 alter table public.contacts enable row level security;
 alter table public.assignments enable row level security;

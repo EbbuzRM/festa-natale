@@ -5,7 +5,7 @@ import { SLOTS, SLOT_LABELS, displayName, newId } from '../lib/types'
 import { boardRows, filledCells } from '../lib/board'
 import { duplicatedContactIds, visibleAssignments } from '../lib/budget'
 import { entertainmentStats } from '../lib/entertainment'
-import { isUnavailable, unavailableAssignments, unavailableOn } from '../lib/availability'
+import { assignmentsOutsideAvailability, isAvailable } from '../lib/availability'
 import { dayLabel, daysInRange, parseDay, relativeLabel, todayIso } from '../lib/format'
 import { EntertainmentCount } from './Entertainment'
 import { IconChevron, IconClose, IconPlus } from './icons'
@@ -29,7 +29,7 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
   // gli scartati restano in rubrica: qui non si vedono e non contano nel costo
   const visible = useMemo(() => visibleAssignments(assignments, contacts), [assignments, contacts])
   const duplicates = useMemo(() => new Set(duplicatedContactIds(visible)), [visible])
-  const clashes = useMemo(() => unavailableAssignments(visible, contacts), [visible, contacts])
+  const clashes = useMemo(() => assignmentsOutsideAvailability(visible, contacts), [visible, contacts])
   const entStats = useMemo(
     () => entertainmentStats(visible, contacts, settings),
     [visible, contacts, settings],
@@ -52,15 +52,6 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
     return map
   }, [visible])
 
-  const offByDay = useMemo(() => {
-    const map = new Map<string, Contact[]>()
-    for (const day of days) {
-      const list = unavailableOn(contacts, day)
-      if (list.length > 0) map.set(day, list)
-    }
-    return map
-  }, [days, contacts])
-
   const weeks = useMemo(() => {
     if (days.length === 0) return []
     const cells: (string | null)[] = []
@@ -81,7 +72,6 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
     () => boardRows(settings.venues, dayAssignments, contacts),
     [settings.venues, dayAssignments, contacts],
   )
-  const offToday = active ? (offByDay.get(active) ?? []) : []
   const cellsUsed = filledCells(rows)
 
   const pickerContacts = useMemo(() => {
@@ -105,7 +95,8 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
         needle ? `${displayName(contact)} ${contact.company}`.toLowerCase().includes(needle) : true,
       )
       .sort((a, b) => {
-        const off = Number(isUnavailable(a, target.day)) - Number(isUnavailable(b, target.day))
+        // prima chi può venire quel giorno, poi gli altri
+        const off = Number(isAvailable(b, target.day)) - Number(isAvailable(a, target.day))
         if (off !== 0) return off
         const weight = (contact: Contact) => (contact.status === 'confermato' ? 0 : 1)
         return weight(a) - weight(b) || displayName(a).localeCompare(displayName(b), 'it')
@@ -175,8 +166,8 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
       ) : null}
       {clashes.length > 0 ? (
         <Banner tone="warn">
-          {clashes.length === 1 ? 'Un appuntamento cade' : `${clashes.length} appuntamenti cadono`} in un
-          giorno in cui il contatto non è disponibile.
+          {clashes.length === 1 ? 'Un appuntamento cade' : `${clashes.length} appuntamenti cadono`} fuori
+          dalle date in cui il contatto ha detto di poter venire.
         </Banner>
       ) : null}
       {active ? (
@@ -242,8 +233,8 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
                             <IconClose size={11} />
                           </button>
                         </div>
-                        {isUnavailable(contact, active) ? (
-                          <span className="day-off">non disponibile</span>
+                        {!isAvailable(contact, active) ? (
+                          <span className="day-off">fuori dalle sue date</span>
                         ) : null}
                       </div>
                     ))}
@@ -267,19 +258,10 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
               {cellsUsed === 1 ? '1 casella usata' : `${cellsUsed} caselle usate`} su{' '}
               {rows.length * SLOTS.length} · {venuesLabel(rows.length)}
             </p>
-            {offToday.length > 0 ? (
-              <p className="day-off-line">
-                Non disponibili: {offToday.slice(0, 5).map((contact) => displayName(contact)).join(', ')}
-                {offToday.length > 5 ? ` +${offToday.length - 5}` : ''}
-              </p>
-            ) : null}
           </div>
 
           <details className="index">
-            <summary>
-              Tutti i giorni dell'evento ({days.length})
-              {offByDay.size > 0 ? ` · ${offByDay.size} con qualcuno assente` : ''}
-            </summary>
+            <summary>Tutti i giorni dell'evento ({days.length})</summary>
             <div className="week-row week-head" aria-hidden="true">
               {WEEK_HEAD.map((label) => (
                 <span key={label}>{label}</span>
@@ -297,20 +279,16 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
                     )
                   }
                   const used = occupancy.get(day)
-                  const off = offByDay.get(day) ?? []
                   return (
                     <button
                       key={day}
                       type="button"
                       className={`index-day is-event${day === active ? ' is-selected' : ''}`}
                       aria-current={day === active ? 'date' : undefined}
-                      aria-label={`${dayLabel(day)}${off.length > 0 ? `, ${off.length} non disponibili` : ''}`}
+                      aria-label={dayLabel(day)}
                       onClick={() => setSelected(day)}
                     >
-                      <span className="num">
-                        {parseDay(day).getDate()}
-                        {off.length > 0 ? <em className="index-off" /> : null}
-                      </span>
+                      <span className="num">{parseDay(day).getDate()}</span>
                       <span className="bars" aria-hidden="true">
                         {SLOTS.map((slot) => (
                           <i key={slot} className={`bar${used?.has(slot) ? ' is-on' : ''}`} />
@@ -383,7 +361,7 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
         ) : (
           <ul className="pick-list">
             {pickerContacts.map((contact) => {
-              const off = picking ? isUnavailable(contact, picking.day) : false
+              const off = picking ? !isAvailable(contact, picking.day) : false
               return (
                 <li key={contact.id}>
                   <button
@@ -398,7 +376,7 @@ export function CalendarView({ onOpenContact, onEditDays }: Props) {
                       <em className="muted small">
                         {contact.subtype || contact.company || 'senza tipo'} · {contact.status}
                       </em>
-                      {off ? <em className="day-off">non disponibile in questo giorno</em> : null}
+                      {off ? <em className="day-off">fuori dalle sue date</em> : null}
                     </span>
                   </button>
                 </li>

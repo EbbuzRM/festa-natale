@@ -34,8 +34,10 @@ It is the only record of the party that exists: the phone in hand and the evenin
 - Calendar: party days (default December weekend plus 23–28), morning/afternoon/evening slots, cost per day, total, budget warning. Each appointment also records the venue (stage, lemon houses, greenhouses) where it happens.
 - Entertainment: a countdown of the slots still to fill (default 30), filled by artists put in the calendar and split by venue.
 - To-do list: a short checklist of errands, saved with the event.
+- Named lists (shopping links, board games): created in settings, filled and checked from their own Lists section in the left navigation.
+- Notes: dated meeting or phone-call notes with a title and free text, edited from their own Notes section in the left navigation.
 - Export/import Excel (three sheets) without duplicating contacts; JSON backup.
-- Storage: local-first in the browser, optional small Supabase database for safety; no login, no multi-user sync, data tied to one browser unless the database is configured.
+- Storage: local-first in the browser, optional small Supabase database with one shared login. Only one device at a time holds the session: signing in elsewhere (or reopening the app with a saved session) signs the previous device out, which can sign back in to take it over.
 - Installable PWA, offline, same screens on phone and desktop.
 - OCR of handwritten notes is explicitly out of scope.
 - No fabricated contacts, prices or event facts: demo data must be labeled as such.

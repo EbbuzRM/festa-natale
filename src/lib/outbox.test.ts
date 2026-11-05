@@ -62,7 +62,7 @@ function contact(id: string, name: string, updatedAt = '2026-11-04T10:00:00.000Z
     origin: '',
     status: 'da_contattare',
     notes: '',
-    unavailable: [],
+    available: [],
     createdAt: '2026-11-04T09:00:00.000Z',
     updatedAt,
   }
@@ -89,6 +89,8 @@ function settings(eventName = 'Festa di Natale'): Settings {
     venues: ['Limonaia 1'],
     entertainmentTarget: 30,
     todos: [],
+    lists: [],
+    notes: [],
   }
 }
 

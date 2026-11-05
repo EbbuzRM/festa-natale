@@ -3,7 +3,7 @@ import { useStore } from '../lib/store'
 import { Field } from './ui'
 
 export function LoginScreen() {
-  const { login, dbConfig } = useStore()
+  const { login, dbConfig, sessionNotice } = useStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -31,6 +31,12 @@ export function LoginScreen() {
           I dati stanno sul database condiviso. Serve l’account creato in Supabase, in
           <em> Authentication → Users</em>: così da questo browser si vede la stessa festa.
         </p>
+
+        {sessionNotice ? (
+          <p className="form-note" role="status">
+            {sessionNotice}
+          </p>
+        ) : null}
 
         <Field label="Email">
           <input

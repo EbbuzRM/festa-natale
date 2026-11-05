@@ -62,8 +62,8 @@ export const SUBTYPES: Record<Category, string[]> = {
   ],
 }
 
-/** Periodo in cui il contatto non è disponibile, estremi compresi. */
-export interface Unavailable {
+/** Periodo in cui il contatto può venire, estremi compresi. */
+export interface Period {
   from: string
   to: string
 }
@@ -86,8 +86,8 @@ export interface Contact {
   origin: string
   status: Status
   notes: string
-  /** giorni in cui non si può proprio: l'app lo ricorda quando lo metti in calendario */
-  unavailable: Unavailable[]
+  /** giorni in cui può venire, estremi compresi; vuoto = nessun vincolo */
+  available: Period[]
   createdAt: string
   updatedAt: string
 }
@@ -112,6 +112,29 @@ export interface Todo {
   createdAt: string
 }
 
+/** Una riga di una lista: può essere anche un link (acquisti). */
+export interface ListItem {
+  id: string
+  text: string
+  done: boolean
+  createdAt: string
+}
+
+export interface PartyList {
+  id: string
+  name: string
+  items: ListItem[]
+}
+
+/** Appunto di riunione o telefonata, legato all'evento. */
+export interface Note {
+  id: string
+  title: string
+  text: string
+  createdAt: string
+  updatedAt: string
+}
+
 /** Le postazioni raccontate dall'host: due limonaie, due serre, il palco. */
 export const DEFAULT_VENUES = ['Limonaia 1', 'Limonaia 2', 'Serra 1', 'Serra 2', 'Palco']
 
@@ -129,6 +152,10 @@ export interface Settings {
   entertainmentTarget: number
   /** lista delle cose da fare */
   todos: Todo[]
+  /** liste libere: acquisti, giochi, cose da portare */
+  lists: PartyList[]
+  /** appunti di riunioni e telefonate */
+  notes: Note[]
 }
 
 export function newId(): string {
@@ -158,7 +185,7 @@ export function emptyContact(category: Category = 'artisti'): Contact {
     origin: '',
     status: 'da_contattare',
     notes: '',
-    unavailable: [],
+    available: [],
     createdAt: stamp,
     updatedAt: stamp,
   }
@@ -166,6 +193,19 @@ export function emptyContact(category: Category = 'artisti'): Contact {
 
 export function emptyTodo(text: string): Todo {
   return { id: newId(), text: text.trim(), done: false, createdAt: nowIso() }
+}
+
+export function emptyListItem(text: string): ListItem {
+  return { id: newId(), text: text.trim(), done: false, createdAt: nowIso() }
+}
+
+export function emptyList(name: string): PartyList {
+  return { id: newId(), name: name.trim(), items: [] }
+}
+
+export function emptyNote(title: string, text: string): Note {
+  const stamp = nowIso()
+  return { id: newId(), title: title.trim(), text: text.trim(), createdAt: stamp, updatedAt: stamp }
 }
 
 export function displayName(contact: Contact): string {

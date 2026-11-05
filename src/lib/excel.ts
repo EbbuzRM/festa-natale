@@ -34,7 +34,7 @@ export const CONTACT_HEADERS = [
   'Chi ha fornito il contatto',
   'Provenienza',
   'Stato',
-  'Non disponibile',
+  'Date in cui può venire',
   'Note',
   'Creato',
   'Aggiornato',
@@ -125,7 +125,7 @@ export async function buildWorkbook(
       'Chi ha fornito il contatto': contact.source,
       Provenienza: contact.origin,
       Stato: STATUS_LABELS[contact.status],
-      'Non disponibile': periodsToText(contact.unavailable),
+      'Date in cui può venire': periodsToText(contact.available),
       Note: contact.notes,
       Creato: contact.createdAt,
       Aggiornato: contact.updatedAt,
@@ -267,7 +267,9 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ImportResult> 
       origin: cellToString(read('Provenienza')),
       status: parseStatus(read('Stato')),
       notes: cellToString(read('Note')),
-      unavailable: parsePeriodsText(cellToString(read('Non disponibile'))),
+      available: parsePeriodsText(
+        cellToString(read('Date in cui può venire')) || cellToString(read('Non disponibile')),
+      ),
       createdAt: created || now,
       updatedAt: cellToString(read('Aggiornato')) || now,
     })

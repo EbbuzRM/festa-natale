@@ -34,20 +34,20 @@ export function ContactEditor({ open, contact, onClose, onSave, onDelete }: Prop
   const [priceText, setPriceText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [offFrom, setOffFrom] = useState('')
-  const [offTo, setOffTo] = useState('')
-  const [offError, setOffError] = useState<string | null>(null)
+  const [fromDay, setFromDay] = useState('')
+  const [toDay, setToDay] = useState('')
+  const [rangeError, setRangeError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     const next = contact ?? emptyContact()
     // anche un backup vecchio può non avere i periodi: qui si riparte sempre da un elenco
-    setDraft({ ...next, unavailable: Array.isArray(next.unavailable) ? next.unavailable : [] })
+    setDraft({ ...next, available: Array.isArray(next.available) ? next.available : [] })
     setPriceText(next.price === null ? '' : String(next.price).replace('.', ','))
     setError(null)
-    setOffFrom('')
-    setOffTo('')
-    setOffError(null)
+    setFromDay('')
+    setToDay('')
+    setRangeError(null)
   }, [open, contact])
 
   const isNew = contact === null
@@ -55,17 +55,17 @@ export function ContactEditor({ open, contact, onClose, onSave, onDelete }: Prop
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
-  function addUnavailable() {
-    if (!offFrom) return
-    const to = offTo || offFrom
-    if (to < offFrom) {
-      setOffError('La fine viene prima dell’inizio: inverti le due date.')
+  function addAvailable() {
+    if (!fromDay) return
+    const to = toDay || fromDay
+    if (to < fromDay) {
+      setRangeError('La fine viene prima dell’inizio: inverti le due date.')
       return
     }
-    set('unavailable', normalizePeriods([...draft.unavailable, { from: offFrom, to }]))
-    setOffFrom('')
-    setOffTo('')
-    setOffError(null)
+    set('available', normalizePeriods([...draft.available, { from: fromDay, to }]))
+    setFromDay('')
+    setToDay('')
+    setRangeError(null)
   }
 
   async function handleSave() {
@@ -243,52 +243,47 @@ export function ContactEditor({ open, contact, onClose, onSave, onDelete }: Prop
       </fieldset>
 
       <div className="field">
-        <span className="field-label">Quando non c’è</span>
+        <span className="field-label">Date in cui PUÒ venire</span>
         <p className="field-hint">
-          I giorni in cui non è proprio disponibile: se lo metti in calendario in quei giorni, l’app te lo
-          segnala.
+          Sono i giorni in cui è disponibile: fuori da queste date l’app non te lo propone in calendario.
+          Se non aggiungi nessuna data, resta disponibile sempre.
         </p>
         <div className="range-form">
           <Field label="Dal">
             <input
               type="date"
-              value={offFrom}
+              value={fromDay}
               onChange={(event) => {
-                setOffFrom(event.target.value)
-                setOffError(null)
+                setFromDay(event.target.value)
+                setRangeError(null)
               }}
             />
           </Field>
           <Field label="Al">
             <input
               type="date"
-              value={offTo}
+              value={toDay}
               onChange={(event) => {
-                setOffTo(event.target.value)
-                setOffError(null)
+                setToDay(event.target.value)
+                setRangeError(null)
               }}
             />
           </Field>
-          <button type="button" className="btn btn-ghost" disabled={!offFrom} onClick={addUnavailable}>
+          <button type="button" className="btn btn-ghost" disabled={!fromDay} onClick={addAvailable}>
             Aggiungi periodo
           </button>
         </div>
-        {offError ? <p className="form-error">{offError}</p> : null}
-        {draft.unavailable.length > 0 ? (
+        {rangeError ? <p className="form-error">{rangeError}</p> : null}
+        {draft.available.length > 0 ? (
           <ul className="period-list">
-            {draft.unavailable.map((period) => (
+            {draft.available.map((period) => (
               <li key={`${period.from}-${period.to}`} className="period-row">
                 <span className="period-when">{periodLabel(period)}</span>
                 <button
                   type="button"
                   className="period-remove"
                   aria-label={`Togli ${periodLabel(period)}`}
-                  onClick={() =>
-                    set(
-                      'unavailable',
-                      draft.unavailable.filter((item) => item !== period),
-                    )
-                  }
+                  onClick={() => set('available', draft.available.filter((item) => item !== period))}
                 >
                   <IconClose size={13} />
                 </button>

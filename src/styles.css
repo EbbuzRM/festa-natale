@@ -322,7 +322,7 @@ input[type='date'] {
   right: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   background: var(--paper);
   border-top: 1px solid var(--line-2);
   padding-bottom: env(safe-area-inset-bottom);
@@ -332,15 +332,16 @@ input[type='date'] {
   display: grid;
   justify-items: center;
   gap: 0.22rem;
-  padding: 0.55rem 0.1rem 0.45rem;
+  padding: 0.55rem 0 0.45rem;
   border: 0;
   border-top: 2px solid transparent;
   border-radius: 0;
   background: transparent;
   color: var(--ink-3);
-  font-size: 0.7rem;
-  letter-spacing: 0.02em;
+  font-size: 0.64rem;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
+  white-space: nowrap;
   margin-top: -1px;
 }
 
@@ -1046,12 +1047,6 @@ input[type='date'] {
   font-variant-numeric: tabular-nums;
 }
 
-.day-off-line {
-  font-size: 0.78rem;
-  color: var(--brick);
-  margin-top: 0.15rem;
-}
-
 .pick-row:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -1263,6 +1258,93 @@ input[type='date'] {
 
 .todo-remove:hover {
   color: var(--brick);
+}
+
+/* ---------- liste e appunti ---------- */
+
+.list-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.list-block {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.list-block + .list-block {
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+}
+
+.list-head,
+.note-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.list-head h3,
+.note-head h3 {
+  font-family: var(--serif);
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.todo-link {
+  color: var(--green-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.list-add {
+  margin-top: 0.15rem;
+}
+
+.note-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.note-form textarea {
+  min-height: 4.6rem;
+}
+
+.note-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.9rem 0 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.note-card {
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.note-card:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.note-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-actions {
+  display: flex;
+  gap: 0.9rem;
 }
 
 /* ---------- tabellone del giorno ---------- */
@@ -1530,13 +1612,6 @@ input[type='date'] {
 
 .bar.is-on {
   background: var(--green-2);
-}
-
-.index-off {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--brick);
 }
 
 /* ---------- settings ---------- */

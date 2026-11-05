@@ -178,10 +178,14 @@ try {
   await offDialog.getByLabel('Al', { exact: true }).fill('2026-12-07')
   await offDialog.getByRole('button', { name: 'Aggiungi periodo' }).click()
   check(
-    'la scheda contatto mostra il periodo di indisponibilità',
+    'la scheda contatto mostra le date in cui può venire',
     await offDialog.getByText('5–7 dicembre 2026').isVisible(),
   )
-  await page.screenshot({ path: join(shots, 'desktop-scheda-indisponibilita.png') })
+  check(
+    'la scheda dice che sono le date in cui può venire',
+    await offDialog.getByText(/fuori da queste date/).isVisible(),
+  )
+  await page.screenshot({ path: join(shots, 'desktop-scheda-disponibilita.png') })
   await offDialog.getByRole('button', { name: 'Salva' }).click()
   await offDialog.waitFor({ state: 'detached' })
 
@@ -189,21 +193,36 @@ try {
   await page.getByRole('button', { name: /Aggiungi a Limonaia 2, Mattina, sabato 5 dic/ }).first().click()
   const offPicker = page.getByRole('dialog')
   await offPicker.waitFor()
+  const zampognari = offPicker.getByRole('button', { name: /Zampognari/ })
   check(
-    'chi non c’è è segnato e non si può scegliere',
-    await offPicker.getByRole('button', { name: /Zampognari, non disponibile/ }).isDisabled(),
+    'chi ha dato le date si può scegliere in quei giorni',
+    (await zampognari.isEnabled()) &&
+      !String(await zampognari.getAttribute('aria-label')).includes('non disponibile'),
   )
   await page.waitForTimeout(400)
-  await page.screenshot({ path: join(shots, 'desktop-picker-indisponibile.png') })
+  await page.screenshot({ path: join(shots, 'desktop-picker-disponibile.png') })
+  await page.keyboard.press('Escape')
+
+  // fuori dalle date date (5-7 dicembre) non si può scegliere: il 12 è un altro giorno d'evento
+  for (let i = 0; i < 3; i += 1) {
+    await page.getByRole('button', { name: 'Giorno dopo' }).click()
+  }
+  await page.getByRole('button', { name: /Aggiungi a Limonaia 2, Mattina, sabato 12 dic/ }).first().click()
+  const outPicker = page.getByRole('dialog')
+  await outPicker.waitFor()
+  check(
+    'fuori dalle sue date non si può scegliere',
+    await outPicker.getByRole('button', { name: /Zampognari, non disponibile/ }).isDisabled(),
+  )
   await page.keyboard.press('Escape')
   check(
-    'il calendario dice chi non c’è in quel giorno',
-    await page.getByText('Non disponibili: Zampognari').first().isVisible(),
+    'il calendario non segnala buchi sulle date',
+    (await page.locator('.index-off').count()) === 0,
   )
-  await page.screenshot({ path: join(shots, 'desktop-calendario-indisponibilita.png'), fullPage: true })
+  await page.screenshot({ path: join(shots, 'desktop-calendario-disponibilita.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.waitForTimeout(350)
-  await page.screenshot({ path: join(shots, 'mobile-calendario-indisponibilita.png'), fullPage: true })
+  await page.screenshot({ path: join(shots, 'mobile-calendario-disponibilita.png'), fullPage: true })
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
 

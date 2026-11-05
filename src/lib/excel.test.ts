@@ -14,6 +14,8 @@ const settings: Settings = {
   venues: ['Limonaia 1', 'Palco'],
   entertainmentTarget: 30,
   todos: [],
+  lists: [],
+  notes: [],
 }
 
 const coro: Contact = {
@@ -30,7 +32,7 @@ const coro: Contact = {
   origin: 'volantino al mercato',
   status: 'confermato',
   notes: 'domenica pomeriggio',
-  unavailable: [{ from: '2026-12-24', to: '2026-12-26' }],
+  available: [{ from: '2026-12-24', to: '2026-12-26' }],
 }
 
 const forno: Contact = {
@@ -77,7 +79,7 @@ describe('excel', () => {
       origin: 'volantino al mercato',
       status: 'confermato',
       notes: 'domenica pomeriggio',
-      unavailable: [{ from: '2026-12-24', to: '2026-12-26' }],
+      available: [{ from: '2026-12-24', to: '2026-12-26' }],
     })
 
     const backForno = parsed.contacts.find((contact) => contact.id === forno.id)

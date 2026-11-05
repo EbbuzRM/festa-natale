@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LocalData } from './repo'
+import { normalizeStoredContact } from './availability'
 import {
   deleteAssignmentRemote,
   deleteContactRemote,
@@ -62,7 +63,12 @@ export function loadOutbox(): OutboxOp[] {
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(isOutboxOp)
+    // una modifica in coda scritta prima del cambio di significato va letta come disponibilità
+    return parsed
+      .filter(isOutboxOp)
+      .map((op) =>
+        op.kind === 'contact' ? { kind: 'contact' as const, value: normalizeStoredContact(op.value) } : op,
+      )
   } catch {
     return []
   }

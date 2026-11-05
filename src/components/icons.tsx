@@ -37,6 +37,25 @@ export function IconBook(props: Props) {
   )
 }
 
+export function IconList(props: Props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4.5 7h1M4.5 12h1M4.5 17h1" />
+      <path d="M9 7h10.5M9 12h10.5M9 17h10.5" />
+    </svg>
+  )
+}
+
+export function IconNote(props: Props) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4.5 4.5h15v10l-4.5 4.5h-10.5z" />
+      <path d="M15 19v-4.5h4.5" />
+      <path d="M8 9h8M8 12.5h5" />
+    </svg>
+  )
+}
+
 export function IconCalendar(props: Props) {
   return (
     <svg {...base(props)}>
